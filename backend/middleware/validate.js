@@ -4,11 +4,17 @@ const constants = require('../utils/constants');
 // Validate MAX_NAME_LENGTH
 const MAX_NAME_LENGTH = Number.isInteger(constants.MAX_NAME_LENGTH) && constants.MAX_NAME_LENGTH > 0 
   ? constants.MAX_NAME_LENGTH 
-  : 50; // Fallback to 50 if invalid
+  : 50;
 
+// Validate NOTIFICATION_TYPES
 const NOTIFICATION_TYPES = Array.isArray(constants.NOTIFICATION_TYPES) 
   ? constants.NOTIFICATION_TYPES 
-  : ['email', 'push', 'in-app', 'bill_reminder']; // Fallback
+  : ['email', 'push', 'in-app', 'bill_reminder'];
+
+// Validate OTP_LENGTH
+const OTP_LENGTH = Number.isInteger(constants.OTP_LENGTH) && constants.OTP_LENGTH > 0 
+  ? constants.OTP_LENGTH 
+  : 6;
 
 const registerSchema = Joi.object({
   email: Joi.string()
@@ -83,6 +89,42 @@ const homeSchema = Joi.object({
     })
 });
 
+const passwordResetRequestSchema = Joi.object({
+  email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .required()
+    .messages({
+      'string.email': 'Invalid email format',
+      'string.empty': 'Email is required'
+    })
+});
+
+const passwordResetVerifySchema = Joi.object({
+  email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .required()
+    .messages({
+      'string.email': 'Invalid email format',
+      'string.empty': 'Email is required'
+    }),
+  otp: Joi.string()
+    .length(OTP_LENGTH)
+    .pattern(/^\d+$/)
+    .required()
+    .messages({
+      'string.length': `OTP must be ${OTP_LENGTH} digits`,
+      'string.pattern.base': 'OTP must be numeric',
+      'string.empty': 'OTP is required'
+    }),
+  newPassword: Joi.string()
+    .min(6)
+    .required()
+    .messages({
+      'string.min': 'New password must be at least 6 characters',
+      'string.empty': 'New password is required'
+    })
+});
+
 // Middleware wrappers
 const validateMiddleware = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);
@@ -94,5 +136,7 @@ module.exports = {
   validateRegisterMiddleware: validateMiddleware(registerSchema),
   validateLoginMiddleware: validateMiddleware(loginSchema),
   validateUpdateProfileMiddleware: validateMiddleware(updateProfileSchema),
-  validateHomeMiddleware: validateMiddleware(homeSchema)
+  validateHomeMiddleware: validateMiddleware(homeSchema),
+  validatePasswordResetRequestMiddleware: validateMiddleware(passwordResetRequestSchema),
+  validatePasswordResetVerifyMiddleware: validateMiddleware(passwordResetVerifySchema)
 };

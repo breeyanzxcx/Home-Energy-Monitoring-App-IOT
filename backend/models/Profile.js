@@ -19,6 +19,10 @@ const profileSchema = new Schema({
     type: Object,
     default: { email: true, push: false, in_app: true }
   },
+  profilePicture: {
+    type: String,
+    default: null
+  },
   created_at: {
     type: Date,
     default: Date.now
