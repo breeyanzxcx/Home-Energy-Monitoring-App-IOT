@@ -1,13 +1,119 @@
 # Home Energy Monitoring System Documentation
 
-## Overview
-The Home Energy Monitoring System allows users to track energy consumption for homes, rooms, and appliances. It supports user authentication with JWT and refresh tokens, rate-limited login and password reset flows, and notifications for anomalies and bill reminders. Energy readings from PZEM-004T sensors are stored, summarized, and analyzed for anomalies, with notifications sent via user-preferred channels (e.g., email to `acephilipgclass18@gmail.com`).
+## Setup
+
+This section guides you through setting up the Home Energy Monitoring System on your local machine. It covers installing dependencies, configuring MongoDB, and running the backend.
+
+### Prerequisites
+- **Node.js**: Version 18.x or higher (download from [nodejs.org](https://nodejs.org)).
+- **MongoDB**: Version 4.4 or higher (download from [mongodb.com](https://www.mongodb.com/try/download/community)).
+- **Gmail Account**: For OTP emails (e.g., `user@example.com`). If 2FA is enabled, generate an App Password at [myaccount.google.com/security](https://myaccount.google.com/security).
+
+### 1. Clone the Project
+Clone the repository to your local machine:
+```bash
+git clone https://github.com/breeyanzxcx/MERN-project.git
+```
+
+### 2. Install Dependencies
+Install backend dependencies using npm:
+```bash
+cd backend
+npm install
+```
+
+### 3. Set Up MongoDB
+1. **Install MongoDB**:
+   - Follow instructions at [mongodb.com/docs/manual/installation/](https://www.mongodb.com/docs/manual/installation/) for your OS (Windows, macOS, or Linux).
+   - Ensure MongoDB is running:
+     ```bash
+     mongod --dbpath data/db
+     ```
+2. **Create Database Directory**:
+   - Create a `data/db` directory in the project root or another location:
+     ```bash
+     mkdir -p data/db
+     ```
+   - Update the `--dbpath` flag if using a different directory.
+3. **Verify MongoDB Connection**:
+   - The system uses `mongodb://localhost:27017/home-energy` as the default connection string.
+   - Start the MongoDB server:
+     ```bash
+     mongod --dbpath data/db
+     ```
+   - Test connection using MongoDB Compass or the MongoDB shell:
+     ```bash
+     mongo mongodb://localhost:27017/home-energy
+     ```
+
+### 4. Configure Environment Variables
+Create a `backend/env.js` file to store environment variables:
+```javascript
+module.exports = {
+  MONGODB_URI: 'mongodb://localhost:27017/home-energy',
+  JWT_SECRET: '390577a62a6463aebf0c4386c357d4e1105cde062243d06fcc675e9e1a8f4353', // Replace with a secure random string
+  JWT_REFRESH_SECRET: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0', // Replace with another secure random string
+  EMAIL_USER: 'user@example.com', // Gmail for OTPs
+  EMAIL_PASS: 'your_gmail_app_password', // App Password if 2FA enabled
+  BILLING_RATE: 10 // PHP/kWh
+};
+```
+- **JWT_SECRET** and **JWT_REFRESH_SECRET**: Generate secure keys (e.g., using `crypto.randomBytes(32).toString('hex')` in Node.js).
+- **EMAIL_PASS**: If Gmail 2FA is enabled, generate an App Password at [myaccount.google.com/security](https://myaccount.google.com/security) under "2-Step Verification" > "App passwords".
+- **BILLING_RATE**: Default is 10 PHP/kWh, adjust as needed.
+
+### 5. Run the Backend
+Start the backend server:
+```bash
+cd backend
+node server.js
+```
+Or, for development with auto-restart:
+```bash
+npm install -g nodemon
+nodemon server.js
+```
+- The server runs on `http://localhost:5000`.
+- Logs are written to `backend/logs/` for debugging.
+
+### 6. Test the Setup
+- **Verify MongoDB**:
+  - Connect to `mongodb://localhost:27017/home-energy` using MongoDB Compass or shell.
+  - After running the server, check for collections like `users`, `profiles`, `otps`, etc.
+- **Test API**:
+  - Register a user:
+    ```bash
+    curl -X POST http://localhost:5000/api/users/register \
+      -H "Content-Type: application/json" \
+      -d '{"email": "user@example.com", "password": "securepassword123", "name": "Ace Philip"}'
+    ```
+  - Expect a response with `token`, `refreshToken`, and `user` details.
+- **Check Email**:
+  - Request a password reset:
+    ```bash
+    curl -X POST http://localhost:5000/api/users/password/reset/request \
+      -H "Content-Type: application/json" \
+      -d '{"email": "user@example.com"}'
+    ```
+  - Check Gmail for OTP email (look in sent/spam folders).
+
+### 7. Troubleshooting
+- **MongoDB Connection Error**:
+  - Ensure `mongod` is running and `data/db` exists.
+  - Verify `MONGODB_URI` in `env.js`.
+- **Email Failure**:
+  - Check `EMAIL_USER` and `EMAIL_PASS` in `env.js`.
+  - Ensure Gmail App Password is used if 2FA is enabled.
+  - Look for 503 errors in logs (`backend/logs/`).
+- **Rate Limiting**:
+  - Login: 5 attempts/15 min, OTP requests/verification: 3 attempts/hour.
+  - Exceeding limits returns 429 errors (e.g., "Too many login attempts, please try again after 15 minutes").
 
 ## Model Fields
 
 ### user
 - `_id`: ObjectId (unique identifier for the user).
-- `email`: String (user’s email, unique, validated format, e.g., `acephilipgclass18@gmail.com`).
+- `email`: String (user’s email, unique, validated format, e.g., `user@example.com`).
 - `password`: String (hashed password using `bcrypt` for authentication).
 - `refreshToken`: String or null (JWT refresh token, stored in MongoDB, expires in 7 days, default: null).
 
@@ -104,12 +210,12 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 ## System Flow
 
 1. **User Authentication**:
-   - **Register**: POST `/api/users/register` creates `user` and `profile` with `email` (e.g., `acephilipgclass18@gmail.com`), hashed `password`, and `name`. Returns JWT (15-minute expiry) and refresh token (7-day expiry, stored in `user.refreshToken`).
+   - **Register**: POST `/api/users/register` creates `user` and `profile` with `email` (e.g., `user@example.com`), hashed `password`, and `name`. Returns JWT (15-minute expiry) and refresh token (7-day expiry, stored in `user.refreshToken`).
    - **Login**: POST `/api/users/login` (rate-limited: 5 attempts/15 min) validates credentials, creates default `profile` if missing, returns JWT and refresh token.
    - **Refresh Token**: POST `/api/users/refresh-token` validates `refreshToken` against `user.refreshToken`, issues new JWT.
    - **Logout**: POST `/api/users/logout` clears `user.refreshToken`.
    - **Password Reset**:
-     - POST `/api/users/password/reset/request` (rate-limited: 3 attempts/hour) sends 6-digit OTP to `email` via Gmail (`acephilipgclass18@gmail.com`), creates `otp` and `notification`.
+     - POST `/api/users/password/reset/request` (rate-limited: 3 attempts/hour) sends 6-digit OTP to `email` via Gmail, creates `otp` and `notification`.
      - POST `/api/users/password/reset/verify` (rate-limited: 3 attempts/hour) validates OTP, updates `password`, deletes `otp`.
      - Returns 503 if email service fails (e.g., Gmail SMTP issue).
 
@@ -148,7 +254,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 
 ```json
 {
-  "email": "acephilipgclass18@gmail.com",
+  "email": "user@example.com",
   "password": "securepassword123",
   "name": "Ace Philip"
 }
@@ -162,7 +268,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "507f1f77bcf86cd799439011",
-    "email": "acephilipgclass18@gmail.com",
+    "email": "user@example.com",
     "name": "Ace Philip"
   }
 }
@@ -173,7 +279,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 
 ```json
 {
-  "email": "acephilipgclass18@gmail.com",
+  "email": "user@example.com",
   "password": "securepassword123"
 }
 ```
@@ -186,7 +292,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "507f1f77bcf86cd799439011",
-    "email": "acephilipgclass18@gmail.com",
+    "email": "user@example.com",
     "name": "Ace Philip"
   }
 }
@@ -223,7 +329,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 
 ```json
 {
-  "email": "acephilipgclass18@gmail.com"
+  "email": "user@example.com"
 }
 ```
 
@@ -257,7 +363,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 
 ```json
 {
-  "email": "acephilipgclass18@gmail.com",
+  "email": "user@example.com",
   "otp": "123456",
   "newPassword": "newsecurepassword123"
 }
@@ -445,7 +551,7 @@ The Home Energy Monitoring System allows users to track energy consumption for h
 ```
 
 ### 13. OTP for Email Notification
-**Internal Creation** (sent to `user.email`, e.g., `acephilipgclass18@gmail.com`)
+**Internal Creation** (sent to `user.email`, e.g., `user@example.com`)
 
 ```json
 {
@@ -567,7 +673,7 @@ module.exports = {
   - `/api/users/password/reset/request` and `/api/users/password/reset/verify`: 3 attempts per hour per IP (429 error: "Too many OTP requests, please try again after 1 hour").
 - **Password Hashing**: `bcrypt` for secure password storage.
 - **Input Validation**: Middleware ensures valid `email`, `password`, `name`, etc.
-- **Email Notifications**: OTPs sent via Gmail (`acephilipgclass18@gmail.com`) with 503 error on email service failure.
+- **Email Notifications**: OTPs sent via Gmail with 503 error on email service failure.
 
 ## Dependencies
 - **Backend**: `express`, `mongoose`, `bcryptjs`, `jsonwebtoken`, `express-rate-limit`, `nodemailer`, `multer`.
