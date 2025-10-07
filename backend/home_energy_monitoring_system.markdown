@@ -1,29 +1,50 @@
-Home Energy Monitoring System Documentation
+# Home Energy Monitoring System Documentation
+
+## Overview
+The Home Energy Monitoring System allows users to track energy consumption for homes, rooms, and appliances. It supports user authentication with JWT and refresh tokens, rate-limited login and password reset flows, and notifications for anomalies and bill reminders. Energy readings from PZEM-004T sensors are stored, summarized, and analyzed for anomalies, with notifications sent via user-preferred channels (e.g., email to `acephilipgclass18@gmail.com`).
 
 ## Model Fields
 
-### home
+### user
+- `_id`: ObjectId (unique identifier for the user).
+- `email`: String (user’s email, unique, validated format, e.g., `acephilipgclass18@gmail.com`).
+- `password`: String (hashed password using `bcrypt` for authentication).
+- `refreshToken`: String or null (JWT refresh token, stored in MongoDB, expires in 7 days, default: null).
 
+### profile
+- `_id`: ObjectId (unique identifier for the profile).
+- `userId`: ObjectId (references `user._id`, one-to-one relationship).
+- `name`: String (user’s display name, e.g., "Ace Philip", non-empty, max 50 chars).
+- `notification_preferences`: Object (e.g., `{ email: true, push: false, in_app: true }`, user-defined preferences for notification channels).
+- `profilePicture`: String or null (filename of uploaded profile picture, e.g., `user123.jpg`, default: null).
+- `created_at`: Date (timestamp of profile creation, defaults to now).
+- `updated_at`: Date (timestamp of last update, defaults to now).
+
+### otp
+- `_id`: ObjectId (unique identifier for the OTP).
+- `userId`: ObjectId (references `user._id`, links to user).
+- `notificationId`: ObjectId (references `notification._id`, links to notification).
+- `otp`: String (6-digit code, e.g., "123456").
+- `expires_at`: Date (expiration timestamp, e.g., 10 minutes from creation).
+
+### notification
+- `_id`: ObjectId (unique identifier for the notification).
+- `userId`: ObjectId (references `user._id`, links notification to user).
+- `homeId`: ObjectId or null (references `home._id`, optional, links notification to home).
+- `anomalyAlertId`: ObjectId or null (references `anomalyAlert._id`, null for bill payment reminders).
+- `channels`: Array of String (e.g., ["email", "in-app"], from `constants.js NOTIFICATION_TYPES`, for multi-channel delivery).
+- `message`: String (e.g., "High energy usage detected in kitchen fridge: 55 kWh" or "Your October bill of 257 PHP is due").
+- `status`: String (e.g., "pending", "sent", "failed", "acknowledged", defaults to "pending").
+- `sent_at`: Date or null (timestamp when notification was sent, null if pending/failed).
+- `created_at`: Date (timestamp of notification creation, defaults to now).
+- `due_date`: Date or null (due date for bill payment reminders, e.g., end of month + 5 days, null for non-bill notifications).
+
+### home
 - `_id`: ObjectId (unique identifier for the home).
 - `userId`: ObjectId (references `user._id`, links home to user).
 - `name`: String (e.g., "Main House", user-defined, non-empty, max 50 chars).
 
-### user
-
-- `_id`: ObjectId (unique identifier for the user).
-- `email`: String (user’s email, unique, validated format, e.g., `user@gmail.com`).
-- `password`: String (hashed password for authentication).
-
-### profile
-
-- `_id`: ObjectId (unique identifier for the profile).
-- `userId`: ObjectId (references `user._id`, one-to-one relationship).
-- `name`: String (user’s display name, e.g., "John Doe", non-empty, max 50 chars).
-- `created_at`: Date (timestamp of profile creation, defaults to now).
-- `notification_preferences`: Object (e.g., `{ email: true, push: false, in_app: true }`, user-defined preferences for notification channels).
-
 ### room
-
 - `_id`: ObjectId (unique identifier for the room).
 - `homeId`: ObjectId (references `home._id`, links room to home).
 - `userId`: ObjectId (references `user._id`, links room to user).
@@ -31,7 +52,6 @@ Home Energy Monitoring System Documentation
 - `energy_threshold`: Number or null (custom energy threshold in kWh for anomaly detection, e.g., 50, null for default from `constants.js`).
 
 ### appliance
-
 - `_id`: ObjectId (unique identifier for the appliance).
 - `homeId`: ObjectId (references `home._id`, links appliance to home).
 - `userId`: ObjectId (references `user._id`, links appliance to user).
@@ -41,7 +61,6 @@ Home Energy Monitoring System Documentation
 - `energy_threshold`: Number or null (custom energy threshold in kWh for anomaly detection, e.g., 50, null for default from `constants.js`).
 
 ### energyReading
-
 - `_id`: ObjectId (unique identifier for the reading).
 - `homeId`: ObjectId (references `home._id`, links reading to home).
 - `userId`: ObjectId (references `user._id`, links reading to user).
@@ -55,7 +74,6 @@ Home Energy Monitoring System Documentation
 - `recorded_at`: Date (timestamp of reading, defaults to now).
 
 ### energySummary
-
 - `_id`: ObjectId (unique identifier for the summary).
 - `homeId`: ObjectId (references `home._id`, links summary to home).
 - `userId`: ObjectId (references `user._id`).
@@ -70,7 +88,6 @@ Home Energy Monitoring System Documentation
 - `reading_count`: Number (count of readings in period, non-negative).
 
 ### anomalyAlert
-
 - `_id`: ObjectId (unique identifier for the alert).
 - `userId`: ObjectId (references `user._id`, links alert to user).
 - `homeId`: ObjectId (references `home._id`, links alert to home).
@@ -84,67 +101,185 @@ Home Energy Monitoring System Documentation
 - `detected_at`: Date (timestamp when the anomaly was detected, defaults to now).
 - `status`: String (e.g., "active", "acknowledged", "resolved", defaults to "active").
 
-### notification
-
-- `_id`: ObjectId (unique identifier for the notification).
-- `userId`: ObjectId (references `user._id`, links notification to user).
-- `homeId`: ObjectId (references `home._id`, links notification to home).
-- `anomalyAlertId`: ObjectId or null (references `anomalyAlert._id`, null for bill payment reminders).
-- `channels`: Array of String (e.g., \["email", "in-app"\], from `constants.js NOTIFICATION_TYPES`, for multi-channel delivery).
-- `message`: String (e.g., "High energy usage detected in kitchen fridge: 55 kWh" or "Your October bill of 257 PHP is due").
-- `status`: String (e.g., "pending", "sent", "failed", "acknowledged", defaults to "pending").
-- `sent_at`: Date or null (timestamp when notification was sent, null if pending/failed).
-- `created_at`: Date (timestamp of notification creation, defaults to now).
-- `due_date`: Date or null (due date for bill payment reminders, e.g., end of month + 5 days, null for non-bill notifications).
-
-### otp
-
-- `_id`: ObjectId (unique identifier for the OTP).
-- `userId`: ObjectId (references `user._id`, links to user).
-- `notificationId`: ObjectId (references `notification._id`, links to notification).
-- `otp`: String (6-digit code, e.g., "123456").
-- `expires_at`: Date (expiration timestamp, e.g., 10 minutes from creation).
-
 ## System Flow
 
-1. **Setup**:
+1. **User Authentication**:
+   - **Register**: POST `/api/users/register` creates `user` and `profile` with `email` (e.g., `acephilipgclass18@gmail.com`), hashed `password`, and `name`. Returns JWT (15-minute expiry) and refresh token (7-day expiry, stored in `user.refreshToken`).
+   - **Login**: POST `/api/users/login` (rate-limited: 5 attempts/15 min) validates credentials, creates default `profile` if missing, returns JWT and refresh token.
+   - **Refresh Token**: POST `/api/users/refresh-token` validates `refreshToken` against `user.refreshToken`, issues new JWT.
+   - **Logout**: POST `/api/users/logout` clears `user.refreshToken`.
+   - **Password Reset**:
+     - POST `/api/users/password/reset/request` (rate-limited: 3 attempts/hour) sends 6-digit OTP to `email` via Gmail (`acephilipgclass18@gmail.com`), creates `otp` and `notification`.
+     - POST `/api/users/password/reset/verify` (rate-limited: 3 attempts/hour) validates OTP, updates `password`, deletes `otp`.
+     - Returns 503 if email service fails (e.g., Gmail SMTP issue).
 
-   - User registers (`user`, `profile`) and sets `notification_preferences` (e.g., `{ email: true, in_app: true }`).
-   - Create `home`, `room` (with user-defined `name` and optional `energy_threshold`), and `appliance` (with user-defined `name`, `type`, and optional `energy_threshold`) via POST /api/homes, /api/rooms, /api/appliances.
+2. **Setup**:
+   - User creates `home`, `room` (with user-defined `name` and optional `energy_threshold`), and `appliance` (with user-defined `name`, `type`, and optional `energy_threshold`) via POST `/api/homes`, `/api/rooms`, `/api/appliances`.
    - Validate `room.name` and `appliance.name` for uniqueness per `homeId`, non-empty, max 50 chars; `appliance.type` for non-empty, max 50 chars if provided.
 
-2. **Record Energy Reading**:
+3. **Record Energy Reading**:
+   - POST `/api/energy` saves `energyReading` with PZEM-004T data (`energy`, `power`, `current`, `voltage`).
+   - Calculate `cost = energy * BILLING_RATE` (from `env.js`, default 10 PHP/kWh).
 
-   - POST /api/energy saves `energyReading` with PZEM-004T data (`energy`, `power`, `current`, `voltage`).
-   - Calculate `cost = energy * BILLING_RATE` (from `constants.js`, e.g., 10 PHP/kWh).
-
-3. **Precompute Summaries**:
-
+4. **Precompute Summaries**:
    - `energyService.js` aggregates `energyReading` into `energySummary` for daily/weekly/monthly periods by `homeId`, `roomId`, `applianceId`.
    - Example: Sum `energy` into `total_energy`, average `power` into `avg_power`, sum `cost` into `total_cost`.
 
-4. **Anomaly Detection**:
-
+5. **Anomaly Detection**:
    - During `energySummary` precomputation, check if `total_energy` exceeds `energy_threshold` (from `appliance`, `room`, or `constants.js HIGH_ENERGY_THRESHOLD`).
    - Create `anomalyAlert` with `alert_type` (e.g., "high_energy"), `description`, `recommended_action`, and `severity`.
 
-5. **Notifications**:
-
+6. **Notifications**:
    - For each `anomalyAlert`, create `notification` with user-preferred `channels` (from `profile.notification_preferences`) and `message`.
    - For monthly `energySummary` (home-level), create `notification` with `channels: ["bill_reminder", "email"]`, `due_date` (end of month + 5 days).
-   - Email notifications: Generate `otp`, send to `user.email` (e.g., `user@gmail.com`), await POST /api/notifications/verify-otp, then send full notification.
-   - In-app notifications: Display via GET /api/notifications.
+   - Email notifications: Generate `otp`, send to `user.email` via Gmail, await POST `/api/notifications/verify-otp`, then send full notification.
+   - In-app notifications: Display via GET `/api/notifications`.
 
-6. **User Actions**:
-
-   - Verify OTP (POST /api/notifications/verify-otp) for email notifications.
-   - Acknowledge notifications (POST /api/notifications/:id/acknowledge).
-   - View energy consumption (GET /api/energy/home, /api/energy/room, /api/energy/appliance) and history (GET /api/energy).
+7. **User Actions**:
+   - Verify OTP (POST `/api/notifications/verify-otp`) for email notifications.
+   - Acknowledge notifications (POST `/api/notifications/:id/acknowledge).
+   - View energy consumption (GET `/api/energy/home`, `/api/energy/room`, `/api/energy/appliance`) and history (GET `/api/energy).
+   - Update profile (PUT `/api/users/profile`) or user (PUT `/api/users`) with rate-limited password reset.
 
 ## API Response Examples
 
-### 1. Create Home
+### 1. Register User
+**POST /api/users/register**
 
+```json
+{
+  "email": "acephilipgclass18@gmail.com",
+  "password": "securepassword123",
+  "name": "Ace Philip"
+}
+```
+
+**Response**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "email": "acephilipgclass18@gmail.com",
+    "name": "Ace Philip"
+  }
+}
+```
+
+### 2. Login
+**POST /api/users/login** (rate-limited: 5 attempts/15 min)
+
+```json
+{
+  "email": "acephilipgclass18@gmail.com",
+  "password": "securepassword123"
+}
+```
+
+**Response**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "email": "acephilipgclass18@gmail.com",
+    "name": "Ace Philip"
+  }
+}
+```
+
+**Error (Rate Limit Exceeded)**
+
+```json
+{
+  "error": "Too many login attempts, please try again after 15 minutes"
+}
+```
+
+### 3. Refresh Token
+**POST /api/users/refresh-token**
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### 4. Request Password Reset
+**POST /api/users/password/reset/request** (rate-limited: 3 attempts/hour)
+
+```json
+{
+  "email": "acephilipgclass18@gmail.com"
+}
+```
+
+**Response**
+
+```json
+{
+  "message": "OTP sent to your email"
+}
+```
+
+**Error (Rate Limit Exceeded)**
+
+```json
+{
+  "error": "Too many OTP requests, please try again after 1 hour"
+}
+```
+
+**Error (Email Failure)**
+
+```json
+{
+  "error": "Email service unavailable",
+  "details": "Failed to send OTP"
+}
+```
+
+### 5. Verify Password Reset
+**POST /api/users/password/reset/verify** (rate-limited: 3 attempts/hour)
+
+```json
+{
+  "email": "acephilipgclass18@gmail.com",
+  "otp": "123456",
+  "newPassword": "newsecurepassword123"
+}
+```
+
+**Response**
+
+```json
+{
+  "message": "Password reset successful"
+}
+```
+
+**Error (Rate Limit Exceeded)**
+
+```json
+{
+  "error": "Too many OTP requests, please try again after 1 hour"
+}
+```
+
+### 6. Create Home
 **POST /api/homes**
 
 ```json
@@ -164,8 +299,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 2. Create Room (User-Defined Name)
-
+### 7. Create Room
 **POST /api/rooms**
 
 ```json
@@ -189,8 +323,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 3. Create Appliance (User-Defined Name and Type)
-
+### 8. Create Appliance
 **POST /api/appliances**
 
 ```json
@@ -218,8 +351,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 4. Create Energy Reading
-
+### 9. Create Energy Reading
 **POST /api/energy**
 
 ```json
@@ -254,8 +386,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 5. Precomputed Energy Summary
-
+### 10. Precomputed Energy Summary
 **Internal Update**
 
 ```json
@@ -275,8 +406,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 6. Anomaly Alert (High Energy)
-
+### 11. Anomaly Alert (High Energy)
 **Internal Creation** (triggered by `total_energy > energy_threshold`)
 
 ```json
@@ -296,8 +426,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 7. Notification (Anomaly, Multi-Channel)
-
+### 12. Notification (Anomaly, Multi-Channel)
 **Internal Creation**
 
 ```json
@@ -315,9 +444,8 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 8. OTP for Email Notification
-
-**Internal Creation** (sent to `user.email`, e.g., `user@gmail.com`)
+### 13. OTP for Email Notification
+**Internal Creation** (sent to `user.email`, e.g., `acephilipgclass18@gmail.com`)
 
 ```json
 {
@@ -329,8 +457,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 9. Verify OTP
-
+### 14. Verify OTP
 **POST /api/notifications/verify-otp**
 
 ```json
@@ -357,8 +484,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 10. Bill Reminder Notification
-
+### 15. Bill Reminder Notification
 **Internal Creation** (cron job, end of October)
 
 ```json
@@ -376,8 +502,7 @@ Home Energy Monitoring System Documentation
 }
 ```
 
-### 11. Fetch Notifications
-
+### 16. Fetch Notifications
 **GET /api/notifications?status=pending**
 
 ```json
@@ -430,7 +555,26 @@ module.exports = {
   SEVERITY_LEVELS: ["low", "medium", "high"],
   NOTIFICATION_TYPES: ["email", "push", "in-app", "bill_reminder"],
   PERIOD_TYPES: ["daily", "weekly", "monthly"],
-  BILLING_RATE: 10, // PHP/kWh
-  HIGH_ENERGY_THRESHOLD: 50 // kWh, default for anomaly detection
+  HIGH_ENERGY_THRESHOLD: 50, // kWh, default for anomaly detection
+  OTP_EXPIRY_MINUTES: 10 // OTP expiration time
 };
 ```
+
+## Security Features
+- **Authentication**: JWT (15-minute expiry) and refresh tokens (7-day expiry, stored in MongoDB).
+- **Rate Limiting**:
+  - `/api/users/login`: 5 attempts per 15 minutes per IP (429 error: "Too many login attempts, please try again after 15 minutes").
+  - `/api/users/password/reset/request` and `/api/users/password/reset/verify`: 3 attempts per hour per IP (429 error: "Too many OTP requests, please try again after 1 hour").
+- **Password Hashing**: `bcrypt` for secure password storage.
+- **Input Validation**: Middleware ensures valid `email`, `password`, `name`, etc.
+- **Email Notifications**: OTPs sent via Gmail (`acephilipgclass18@gmail.com`) with 503 error on email service failure.
+
+## Dependencies
+- **Backend**: `express`, `mongoose`, `bcryptjs`, `jsonwebtoken`, `express-rate-limit`, `nodemailer`, `multer`.
+- **Removed**: `redis` (previously used for caching and refresh tokens).
+
+## Notes
+- All endpoints require authentication via `Authorization: Bearer <token>` except `/register`, `/login`, `/password/reset/request`, and `/password/reset/verify`.
+- MongoDB stores all data (users, refresh tokens, profiles, OTPs, notifications).
+- Logs are written to `backend/logs/` for debugging.
+- Gmail App Password required for `EMAIL_PASS` in `env.js` if 2FA is enabled.
