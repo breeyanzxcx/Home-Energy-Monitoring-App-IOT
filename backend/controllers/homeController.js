@@ -1,4 +1,6 @@
 const Home = require('../models/Home');
+const Room = require('../models/Room');
+const Appliance = require('../models/Appliance');
 const { logger } = require('../utils/logger');
 
 exports.createHome = async (req, res) => {
@@ -81,6 +83,11 @@ exports.deleteHome = async (req, res) => {
       logger.error('Home not found:', req.params.id);
       return res.status(404).json({ error: 'Home not found' });
     }
+    
+    // Cascade: Delete child rooms (preps for appliances later)
+    await Room.deleteMany({ homeId: req.params.id });
+    await Appliance.deleteMany({ homeId: req.params.id });
+    
     logger.info(`Home deleted: ${home.name}`);
     res.status(204).send();
   } catch (err) {

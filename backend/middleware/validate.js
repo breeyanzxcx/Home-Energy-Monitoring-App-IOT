@@ -125,6 +125,128 @@ const passwordResetVerifySchema = Joi.object({
     })
 });
 
+const roomSchema = Joi.object({
+  homeId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/) // Mongo ObjectId format
+    .required()
+    .messages({
+      'string.pattern.base': 'Invalid homeId format',
+      'string.empty': 'homeId is required'
+    }),
+  name: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .required()
+    .messages({
+      'string.max': `Name cannot exceed ${MAX_NAME_LENGTH} characters`,
+      'string.empty': 'Name is required'
+    }),
+  energy_threshold: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      'number.min': 'Energy threshold must be non-negative'
+    })
+});
+
+const updateRoomSchema = Joi.object({
+  homeId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Invalid homeId format'
+    }),
+  name: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .optional()
+    .messages({
+      'string.max': `Name cannot exceed ${MAX_NAME_LENGTH} characters`
+    }),
+  energy_threshold: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      'number.min': 'Energy threshold must be non-negative'
+    })
+}).min(1).messages({
+  'object.min': 'At least one field to update is required'
+});
+
+const applianceSchema = Joi.object({
+  homeId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Invalid homeId format',
+      'string.empty': 'homeId is required'
+    }),
+  roomId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Invalid roomId format'
+    }),
+  name: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .required()
+    .messages({
+      'string.max': `Name cannot exceed ${MAX_NAME_LENGTH} characters`,
+      'string.empty': 'Name is required'
+    }),
+  type: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .optional()
+    .messages({
+      'string.max': `Type cannot exceed ${MAX_NAME_LENGTH} characters`
+    }),
+  energy_threshold: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      'number.min': 'Energy threshold must be non-negative'
+    })
+});
+
+const updateApplianceSchema = Joi.object({
+  homeId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Invalid homeId format'
+    }),
+  roomId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Invalid roomId format'
+    }),
+  name: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .optional()
+    .messages({
+      'string.max': `Name cannot exceed ${MAX_NAME_LENGTH} characters`
+    }),
+  type: Joi.string()
+    .trim()
+    .max(MAX_NAME_LENGTH)
+    .optional()
+    .messages({
+      'string.max': `Type cannot exceed ${MAX_NAME_LENGTH} characters`
+    }),
+  energy_threshold: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      'number.min': 'Energy threshold must be non-negative'
+    })
+}).min(1).messages({
+  'object.min': 'At least one field to update is required'
+});
+
 // Middleware wrappers
 const validateMiddleware = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);
@@ -138,5 +260,9 @@ module.exports = {
   validateUpdateProfileMiddleware: validateMiddleware(updateProfileSchema),
   validateHomeMiddleware: validateMiddleware(homeSchema),
   validatePasswordResetRequestMiddleware: validateMiddleware(passwordResetRequestSchema),
-  validatePasswordResetVerifyMiddleware: validateMiddleware(passwordResetVerifySchema)
+  validatePasswordResetVerifyMiddleware: validateMiddleware(passwordResetVerifySchema),
+  validateRoomMiddleware: validateMiddleware(roomSchema),
+  validateUpdateRoomMiddleware: validateMiddleware(updateRoomSchema),
+  validateApplianceMiddleware: validateMiddleware(applianceSchema),
+  validateUpdateApplianceMiddleware: validateMiddleware(updateApplianceSchema)
 };

@@ -5,7 +5,8 @@ const morgan = require('morgan');
 const path = require('path');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
-
+const roomRoutes = require('./routes/roomRoutes');
+const applianceRoutes = require('./routes/applianceRoutes');
 const app = express();
 
 // Middleware
@@ -19,6 +20,9 @@ app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'upload
 
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/homes', require('./routes/homeRoutes'));
+app.use('/api/rooms', roomRoutes);
+app.use('/api/appliances', applianceRoutes);
 
 // Error handler
 app.use(errorHandler);
