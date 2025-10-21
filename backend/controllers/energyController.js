@@ -1,8 +1,9 @@
+// backend/controllers/energyController.js
 const { saveEnergyReading } = require('../services/energyService');
 const Home = require('../models/Home');
 const Appliance = require('../models/Appliance');
 const Room = require('../models/Room');
-const EnergySummary = require('../models/EnergySummary'); // Add this import
+const EnergySummary = require('../models/EnergySummary');
 const { logger } = require('../utils/logger');
 
 // Helper to validate ownership
@@ -10,9 +11,11 @@ const validateOwnership = async (homeId, applianceId, roomId, userId) => {
   const home = await Home.findOne({ _id: homeId, userId });
   if (!home) throw new Error('Home not found or does not belong to you');
 
-  const appliance = await Appliance.findOne({ _id: applianceId, userId });
-  if (!appliance) throw new Error('Appliance not found or does not belong to you');
-  if (appliance.homeId.toString() !== homeId) throw new Error('Appliance does not belong to the specified home');
+  if (applianceId) { // Only validate applianceId if provided (for getHomeEnergySummary)
+    const appliance = await Appliance.findOne({ _id: applianceId, userId });
+    if (!appliance) throw new Error('Appliance not found or does not belong to you');
+    if (appliance.homeId.toString() !== homeId) throw new Error('Appliance does not belong to the specified home');
+  }
 
   if (roomId) {
     const room = await Room.findOne({ _id: roomId, userId });
@@ -21,7 +24,8 @@ const validateOwnership = async (homeId, applianceId, roomId, userId) => {
   }
 };
 
-exports.createEnergyReading = async (req, res) => {
+// Create energy reading
+const createEnergyReading = async (req, res) => {
   try {
     logger.info(`Creating energy reading for user: ${req.user._id}`);
     const { homeId, applianceId, roomId, energy, power, current, voltage, recorded_at } = req.body;
@@ -69,7 +73,8 @@ exports.createEnergyReading = async (req, res) => {
   }
 };
 
-exports.getEnergySummaries = async (req, res) => {
+// Get energy summaries
+const getEnergySummaries = async (req, res) => {
   try {
     const { homeId, applianceId, roomId, period_type } = req.query;
     const query = { userId: req.user._id };
@@ -90,7 +95,8 @@ exports.getEnergySummaries = async (req, res) => {
   }
 };
 
-exports.getHomeEnergySummary = async (req, res) => {
+// Get home energy summary
+const getHomeEnergySummary = async (req, res) => {
   try {
     const { homeId } = req.params;
     await validateOwnership(homeId, null, null, req.user._id); // Only check home ownership
@@ -104,17 +110,16 @@ exports.getHomeEnergySummary = async (req, res) => {
     return res.status(200).json(summaries);
   } catch (err) {
     logger.error('Get home energy summary error:', err.stack || err);
-    if (
-      err.message === 'Home not found or does not belong to you'
-    ) {
+    if (err.message === 'Home not found or does not belong to you') {
       return res.status(404).json({ error: err.message });
     }
     return res.status(500).json({ error: 'Server error', details: err.message || 'Unknown error' });
   }
 };
 
+// Export functions
 module.exports = {
-  createEnergyReading,
-  getEnergySummaries,
-  getHomeEnergySummary
+  createEnergyReading: createEnergyReading,
+  getEnergySummaries: getEnergySummaries,
+  getHomeEnergySummary: getHomeEnergySummary
 };

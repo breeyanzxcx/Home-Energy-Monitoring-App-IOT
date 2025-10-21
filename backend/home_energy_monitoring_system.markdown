@@ -2,21 +2,22 @@
 
 ## Setup
 
-This section guides you through setting up the Home Energy Monitoring System on your local machine. It covers installing dependencies, configuring MongoDB, and running the backend.
+This section guides you through setting up the Home Energy Monitoring System on your local machine, covering backend installation, MongoDB configuration, and ESP32/Arduino setup for real and randomized energy data.
 
 ### Prerequisites
-- **Node.js**: Version 18.x or higher (download from [nodejs.org](https://nodejs.org)).
-- **MongoDB**: Version 4.4 or higher (download from [mongodb.com](https://www.mongodb.com/try/download/community)).
+- **Node.js**: Version 18.x or higher ([nodejs.org](https://nodejs.org)).
+- **MongoDB**: Version 4.4 or higher ([mongodb.com](https://www.mongodb.com/try/download/community)).
 - **Gmail Account**: For OTP emails (e.g., `user@example.com`). If 2FA is enabled, generate an App Password at [myaccount.google.com/security](https://myaccount.google.com/security).
+- **ESP32 with PZEM-004T**: For real-time energy monitoring of one appliance and simulating others via randomization.
 
 ### 1. Clone the Project
-Clone the repository to your local machine:
+Clone the repository:
 ```bash
 git clone https://github.com/breeyanzxcx/MERN-project.git
 ```
 
 ### 2. Install Dependencies
-Install backend dependencies using npm:
+Install backend dependencies:
 ```bash
 cd backend
 npm install
@@ -24,234 +25,302 @@ npm install
 
 ### 3. Set Up MongoDB
 1. **Install MongoDB**:
-   - Follow instructions at [mongodb.com/docs/manual/installation/](https://www.mongodb.com/docs/manual/installation/) for your OS (Windows, macOS, or Linux).
-   - Ensure MongoDB is running:
+   - Follow instructions at [mongodb.com/docs/manual/installation/](https://www.mongodb.com/docs/manual/installation/) for your OS (Windows, macOS, Linux).
+   - Start MongoDB:
      ```bash
      mongod --dbpath data/db
      ```
 2. **Create Database Directory**:
-   - Create a `data/db` directory in the project root or another location:
+   - Create `data/db` in the project root:
      ```bash
      mkdir -p data/db
      ```
-   - Update the `--dbpath` flag if using a different directory.
-3. **Verify MongoDB Connection**:
-   - The system uses `mongodb://localhost:27017/home-energy` as the default connection string.
-   - Start the MongoDB server:
-     ```bash
-     mongod --dbpath data/db
-     ```
-   - Test connection using MongoDB Compass or the MongoDB shell:
+   - Update `--dbpath` if using a different directory.
+3. **Verify Connection**:
+   - Default connection string: `mongodb://localhost:27017/home-energy`.
+   - Test using MongoDB Compass or shell:
      ```bash
      mongo mongodb://localhost:27017/home-energy
      ```
 
 ### 4. Configure Environment Variables
-Create a `backend/env.js` file to store environment variables:
+Create `backend/env.js`:
 ```javascript
 module.exports = {
   MONGODB_URI: 'mongodb://localhost:27017/home-energy',
-  JWT_SECRET: '390577a62a6463aebf0c4386c357d4e1105cde062243d06fcc675e9e1a8f4353', // Replace with a secure random string
-  JWT_REFRESH_SECRET: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0', // Replace with another secure random string
+  JWT_SECRET: '390577a62a6463aebf0c4386c357d4e1105cde062243d06fcc675e9e1a8f4353', // Secure random string
+  JWT_REFRESH_SECRET: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0', // Secure random string
   EMAIL_USER: 'user@example.com', // Gmail for OTPs
   EMAIL_PASS: 'your_gmail_app_password', // App Password if 2FA enabled
-  BILLING_RATE: 10 // PHP/kWh
+  BILLING_RATE: 10, // PHP/kWh
+  RANDOM_SEED: '12345' // Optional seed for randomized data testing
 };
 ```
-- **JWT_SECRET** and **JWT_REFRESH_SECRET**: Generate secure keys (e.g., using `crypto.randomBytes(32).toString('hex')` in Node.js).
-- **EMAIL_PASS**: If Gmail 2FA is enabled, generate an App Password at [myaccount.google.com/security](https://myaccount.google.com/security) under "2-Step Verification" > "App passwords".
-- **BILLING_RATE**: Default is 10 PHP/kWh, adjust as needed.
+- **JWT_SECRET**, **JWT_REFRESH_SECRET**: Generate using `crypto.randomBytes(32).toString('hex')`.
+- **EMAIL_PASS**: Use Gmail App Password if 2FA enabled ([myaccount.google.com/security](https://myaccount.google.com/security)).
+- **BILLING_RATE**: Default 10 PHP/kWh, adjust as needed.
+- **RANDOM_SEED**: Optional for consistent randomized data in testing.
 
-### 5. Run the Backend
-Start the backend server:
+### 5. Set Up ESP32 with PZEM-004T
+1. **Hardware**:
+   - Connect PZEM-004T to ESP32 for one appliance (e.g., Smart Bulb).
+2. **Arduino Code**:
+   - Configure to post real data for the monitored appliance and randomized data for others.
+   - Example (simplified):
+     ```cpp
+     #include <WiFi.h>
+     #include <HTTPClient.h>
+     void loop() {
+       // Real data (Smart Bulb)
+       if (millis() % 60000 == 0) {
+         float power = pzem.readPower();
+         float energy = pzem.readEnergy();
+         httpPost("http://localhost:5000/api/energy", {
+           "applianceId": "507f1f77bcf86cd799439014",
+           "energy": energy,
+           "power": power,
+           "is_randomized": false
+         });
+       }
+       // Randomized data (Fridge, AC)
+       if (millis() % 300000 == 0) {
+         String appliances[] = {"fridge_id", "ac_id"};
+         String selected = appliances[random(0, 2)];
+         bool isOn = random(0, 100) < 70; // 70% on
+         float power = isOn ? random(100, 500) : 0;
+         httpPost("http://localhost:5000/api/energy", {
+           "applianceId": selected,
+           "energy": isOn ? random(0.1, 2.0) : 0,
+           "power": power,
+           "is_randomized": true
+         });
+       }
+     }
+     ```
+   - Fetch appliances dynamically via `GET /api/appliances` (optional).
+3. **Future Sensors**:
+   - Add new PZEM, update Arduino to post real data (`is_randomized: false`).
+
+### 6. Run the Backend
+Start the server:
 ```bash
 cd backend
 node server.js
 ```
-Or, for development with auto-restart:
+Or, for development:
 ```bash
 npm install -g nodemon
 nodemon server.js
 ```
-- The server runs on `http://localhost:5000`.
-- Logs are written to `backend/logs/` for debugging.
+- Runs on `http://localhost:5000`.
+- Logs in `backend/logs/`.
 
-### 6. Test the Setup
-- **Verify MongoDB**:
-  - Connect to `mongodb://localhost:27017/home-energy` using MongoDB Compass or shell.
-  - After running the server, check for collections like `users`, `profiles`, `otps`, etc.
-- **Test API**:
-  - Register a user:
+### 7. Test the Setup
+- **MongoDB**:
+  - Connect to `mongodb://localhost:27017/home-energy`.
+  - Check collections: `users`, `appliances`, `energyreadings`, etc.
+- **API**:
+  - Register user:
     ```bash
     curl -X POST http://localhost:5000/api/users/register \
       -H "Content-Type: application/json" \
       -d '{"email": "user@example.com", "password": "securepassword123", "name": "Ace Philip"}'
     ```
-  - Expect a response with `token`, `refreshToken`, and `user` details.
-- **Check Email**:
-  - Request a password reset:
+  - Response: `{ token, refreshToken, user }`.
+- **ESP32**:
+  - Post real data:
+    ```bash
+    curl -X POST http://localhost:5000/api/energy \
+      -H "Content-Type: application/json" \
+      -d '{"homeId": "507f1f77bcf86cd799439012", "applianceId": "507f1f77bcf86cd799439014", "energy": 0.1, "power": 60, "is_randomized": false}'
+    ```
+  - Post randomized data:
+    ```bash
+    curl -X POST http://localhost:5000/api/energy \
+      -H "Content-Type: application/json" \
+      -d '{"homeId": "507f1f77bcf86cd799439012", "applianceId": "fridge_id", "energy": 0.5, "power": 300, "is_randomized": true}'
+    ```
+- **Email**:
+  - Request password reset:
     ```bash
     curl -X POST http://localhost:5000/api/users/password/reset/request \
       -H "Content-Type: application/json" \
       -d '{"email": "user@example.com"}'
     ```
-  - Check Gmail for OTP email (look in sent/spam folders).
+  - Check Gmail (sent/spam).
 
-### 7. Troubleshooting
-- **MongoDB Connection Error**:
-  - Ensure `mongod` is running and `data/db` exists.
-  - Verify `MONGODB_URI` in `env.js`.
+### 8. Troubleshooting
+- **MongoDB Connection**:
+  - Ensure `mongod` runs and `data/db` exists.
+  - Verify `MONGODB_URI`.
 - **Email Failure**:
-  - Check `EMAIL_USER` and `EMAIL_PASS` in `env.js`.
-  - Ensure Gmail App Password is used if 2FA is enabled.
-  - Look for 503 errors in logs (`backend/logs/`).
+  - Check `EMAIL_USER`, `EMAIL_PASS`.
+  - Ensure App Password for 2FA.
+  - Check `backend/logs/` for 503 errors.
+- **ESP32**:
+  - Verify WiFi and `POST /api/energy` connectivity.
+  - Check logs for 400/401 errors.
 - **Rate Limiting**:
-  - Login: 5 attempts/15 min, OTP requests/verification: 3 attempts/hour.
-  - Exceeding limits returns 429 errors (e.g., "Too many login attempts, please try again after 15 minutes").
+  - Login: 5 attempts/15 min.
+  - OTP: 3 attempts/hour.
+  - Energy posts: 100/hour (new).
+  - 429 errors on limit exceed.
 
 ## Model Fields
 
 ### user
-- `_id`: ObjectId (unique identifier for the user).
-- `email`: String (user’s email, unique, validated format, e.g., `user@example.com`).
-- `password`: String (hashed password using `bcrypt` for authentication).
-- `refreshToken`: String or null (JWT refresh token, stored in MongoDB, expires in 7 days, default: null).
+- `_id`: ObjectId (unique identifier).
+- `email`: String (unique, e.g., `user@example.com`).
+- `password`: String (hashed via `bcrypt`).
+- `refreshToken`: String or null (JWT refresh token, 7-day expiry, default: null).
 
 ### profile
-- `_id`: ObjectId (unique identifier for the profile).
-- `userId`: ObjectId (references `user._id`, one-to-one relationship).
-- `name`: String (user’s display name, e.g., "Ace Philip", non-empty, max 50 chars).
-- `notification_preferences`: Object (e.g., `{ email: true, push: false, in_app: true }`, user-defined preferences for notification channels).
-- `profilePicture`: String or null (filename of uploaded profile picture, e.g., `user123.jpg`, default: null).
-- `created_at`: Date (timestamp of profile creation, defaults to now).
-- `updated_at`: Date (timestamp of last update, defaults to now).
+- `_id`: ObjectId.
+- `userId`: ObjectId (references `user._id`).
+- `name`: String (e.g., "Ace Philip", max 50 chars).
+- `notification_preferences`: Object (e.g., `{ email: true, push: false, in_app: true }`).
+- `profilePicture`: String or null (e.g., `user123.jpg`, default: null).
+- `created_at`: Date (defaults to now).
+- `updated_at`: Date (defaults to now).
 
 ### otp
-- `_id`: ObjectId (unique identifier for the OTP).
-- `userId`: ObjectId (references `user._id`, links to user).
-- `notificationId`: ObjectId (references `notification._id`, links to notification).
-- `otp`: String (6-digit code, e.g., "123456").
-- `expires_at`: Date (expiration timestamp, e.g., 10 minutes from creation).
+- `_id`: ObjectId.
+- `userId`: ObjectId (references `user._id`).
+- `notificationId`: ObjectId (references `notification._id`).
+- `otp`: String (6-digit, e.g., "123456").
+- `expires_at`: Date (10 minutes from creation).
 
 ### notification
-- `_id`: ObjectId (unique identifier for the notification).
-- `userId`: ObjectId (references `user._id`, links notification to user).
-- `homeId`: ObjectId or null (references `home._id`, optional, links notification to home).
-- `anomalyAlertId`: ObjectId or null (references `anomalyAlert._id`, null for bill payment reminders).
-- `channels`: Array of String (e.g., ["email", "in-app"], from `constants.js NOTIFICATION_TYPES`, for multi-channel delivery).
-- `message`: String (e.g., "High energy usage detected in kitchen fridge: 55 kWh" or "Your October bill of 257 PHP is due").
-- `status`: String (e.g., "pending", "sent", "failed", "acknowledged", defaults to "pending").
-- `sent_at`: Date or null (timestamp when notification was sent, null if pending/failed).
-- `created_at`: Date (timestamp of notification creation, defaults to now).
-- `due_date`: Date or null (due date for bill payment reminders, e.g., end of month + 5 days, null for non-bill notifications).
+- `_id`: ObjectId.
+- `userId`: ObjectId (references `user._id`).
+- `homeId`: ObjectId or null (references `home._id`).
+- `anomalyAlertId`: ObjectId or null (references `anomalyAlert._id`, null for bill reminders).
+- `channels`: Array of String (e.g., ["email", "in-app"], from `constants.js NOTIFICATION_TYPES`).
+- `message`: String (e.g., "High energy usage in smart bulb: 15 kWh").
+- `status`: String ("pending", "sent", "failed", "acknowledged", default: "pending").
+- `sent_at`: Date or null (null if pending/failed).
+- `created_at`: Date (defaults to now).
+- `due_date`: Date or null (e.g., "2025-11-05" for bills, null otherwise).
 
 ### home
-- `_id`: ObjectId (unique identifier for the home).
-- `userId`: ObjectId (references `user._id`, links home to user).
-- `name`: String (e.g., "Main House", user-defined, non-empty, max 50 chars).
+- `_id`: ObjectId.
+- `userId`: ObjectId (references `user._id`).
+- `name`: String (e.g., "Main House", max 50 chars).
 
 ### room
-- `_id`: ObjectId (unique identifier for the room).
-- `homeId`: ObjectId (references `home._id`, links room to home).
-- `userId`: ObjectId (references `user._id`, links room to user).
-- `name`: String (e.g., "kitchen", "office", user-defined, non-empty, max 50 chars, unique per `homeId`).
-- `energy_threshold`: Number or null (custom energy threshold in kWh for anomaly detection, e.g., 50, null for default from `constants.js`).
+- `_id`: ObjectId.
+- `homeId`: ObjectId (references `home._id`).
+- `userId`: ObjectId (references `user._id`).
+- `name`: String (e.g., "kitchen", max 50 chars, unique per `homeId`).
+- `energy_threshold`: Number or null (e.g., 50 kWh, default from `constants.js`).
 
 ### appliance
-- `_id`: ObjectId (unique identifier for the appliance).
-- `homeId`: ObjectId (references `home._id`, links appliance to home).
-- `userId`: ObjectId (references `user._id`, links appliance to user).
-- `roomId`: ObjectId or null (references `room._id`, optional, null if not tied to a room).
-- `name`: String (e.g., "fridge", "smart bulb", user-defined, non-empty, max 50 chars, unique per `homeId`).
-- `type`: String or null (e.g., "cooling", "custom", user-defined, non-empty, max 50 chars, optional).
-- `energy_threshold`: Number or null (custom energy threshold in kWh for anomaly detection, e.g., 50, null for default from `constants.js`).
+- `_id`: ObjectId.
+- `homeId`: ObjectId (references `home._id`).
+- `userId`: ObjectId (references `user._id`).
+- `roomId`: ObjectId or null (references `room._id`).
+- `name`: String (e.g., "smart bulb", max 50 chars, unique per `homeId`).
+- `type`: String or null (e.g., "lighting", max 50 chars, optional).
+- `energy_threshold`: Number or null (e.g., 10 kWh, default from `constants.js`).
+- `last_monitored_at`: Date or null (timestamp of last real data post, null for randomized).
 
 ### energyReading
-- `_id`: ObjectId (unique identifier for the reading).
-- `homeId`: ObjectId (references `home._id`, links reading to home).
-- `userId`: ObjectId (references `user._id`, links reading to user).
-- `applianceId`: ObjectId (references `appliance._id`, links reading to appliance).
-- `roomId`: ObjectId or null (references `room._id`, optional, inherited from `appliance.roomId` or null).
-- `energy`: Number (energy consumed in kWh, e.g., 1.5, non-negative, from PZEM-004T).
-- `power`: Number (power in watts, e.g., 500, non-negative, from PZEM-004T).
-- `current`: Number (current in amps, e.g., 2.3, non-negative, from PZEM-004T).
-- `voltage`: Number (voltage in volts, e.g., 220, non-negative, from PZEM-004T).
-- `cost`: Number (cost in PHP, calculated as `energy * BILLING_RATE`, non-negative).
-- `recorded_at`: Date (timestamp of reading, defaults to now).
+- `_id`: ObjectId.
+- `homeId`: ObjectId (references `home._id`).
+- `userId`: ObjectId (references `user._id`).
+- `applianceId`: ObjectId (references `appliance._id`).
+- `roomId`: ObjectId or null (references `room._id`, from `appliance.roomId`).
+- `energy`: Number (kWh, e.g., 1.5, non-negative, from PZEM or randomized).
+- `power`: Number (watts, e.g., 500, non-negative).
+- `current`: Number (amps, e.g., 2.3, non-negative).
+- `voltage`: Number (volts, e.g., 220, non-negative).
+- `cost`: Number (PHP, `energy * BILLING_RATE`, non-negative).
+- `recorded_at`: Date (UTC, defaults to now).
+- `is_on`: Boolean (true if `power > 0`, false otherwise).
+- `is_randomized`: Boolean (true for simulated data, false for real PZEM data).
 
 ### energySummary
-- `_id`: ObjectId (unique identifier for the summary).
-- `homeId`: ObjectId (references `home._id`, links summary to home).
+- `_id`: ObjectId.
+- `homeId`: ObjectId (references `home._id`).
 - `userId`: ObjectId (references `user._id`).
-- `applianceId`: ObjectId or null (references `appliance._id`, null if room-based or home-based).
-- `roomId`: ObjectId or null (references `room._id`, null if appliance-based or home-based).
-- `period_start`: Date (start of period, e.g., start of day/week/month).
-- `period_end`: Date (end of period, e.g., end of day/week/month).
+- `applianceId`: ObjectId or null (references `appliance._id`).
+- `roomId`: ObjectId or null (references `room._id`).
+- `period_start`: Date (UTC, e.g., "2025-10-01T00:00:00Z").
+- `period_end`: Date (UTC, e.g., "2025-10-31T23:59:59Z").
 - `period_type`: String ("daily", "weekly", "monthly", from `constants.js PERIOD_TYPES`).
-- `total_energy`: Number (sum of energy in kWh for period, non-negative).
-- `avg_power`: Number (average power in watts for period, non-negative).
-- `total_cost`: Number (sum of cost in PHP for period, non-negative).
-- `reading_count`: Number (count of readings in period, non-negative).
+- `total_energy`: Number (kWh sum, non-negative).
+- `avg_power`: Number (watts average, non-negative).
+- `total_cost`: Number (PHP sum, non-negative).
+- `reading_count`: Number (count of readings, non-negative).
+- `active_time_percentage`: Number (percentage of readings with `is_on: true`, 0-100).
 
 ### anomalyAlert
-- `_id`: ObjectId (unique identifier for the alert).
-- `userId`: ObjectId (references `user._id`, links alert to user).
-- `homeId`: ObjectId (references `home._id`, links alert to home).
-- `roomId`: ObjectId or null (references `room._id`, null if not room-specific).
-- `applianceId`: ObjectId or null (references `appliance._id`, null if not appliance-specific).
-- `energySummaryId`: ObjectId or null (references `energySummary._id`, links to the summary that triggered the alert).
-- `alert_type`: String (e.g., "high_energy", "high_cost", "unusual_spike", from `constants.js ALERT_TYPES`).
-- `description`: String (e.g., "Energy consumption in kitchen exceeded 50 kWh this month").
-- `recommended_action`: String (e.g., "Check for faulty appliances or unplug unused devices").
-- `severity`: String (e.g., "low", "medium", "high", from `constants.js SEVERITY_LEVELS`).
-- `detected_at`: Date (timestamp when the anomaly was detected, defaults to now).
-- `status`: String (e.g., "active", "acknowledged", "resolved", defaults to "active").
+- `_id`: ObjectId.
+- `userId`: ObjectId (references `user._id`).
+- `homeId`: ObjectId (references `home._id`).
+- `roomId`: ObjectId or null (references `room._id`).
+- `applianceId`: ObjectId or null (references `appliance._id`).
+- `energySummaryId`: ObjectId or null (references `energySummary._id`).
+- `alert_type`: String (e.g., "high_energy", from `constants.js ALERT_TYPES`).
+- `description`: String (e.g., "Smart bulb used 15 kWh > 10 kWh").
+- `recommended_action`: String (e.g., "Check for malfunction").
+- `severity`: String ("low", "medium", "high", from `constants.js SEVERITY_LEVELS`).
+- `detected_at`: Date (UTC, defaults to now).
+- `status`: String ("active", "acknowledged", "resolved", default: "active").
 
 ## System Flow
 
 1. **User Authentication**:
-   - **Register**: POST `/api/users/register` creates `user` and `profile` with `email` (e.g., `user@example.com`), hashed `password`, and `name`. Returns JWT (15-minute expiry) and refresh token (7-day expiry, stored in `user.refreshToken`).
-   - **Login**: POST `/api/users/login` (rate-limited: 5 attempts/15 min) validates credentials, creates default `profile` if missing, returns JWT and refresh token.
-   - **Refresh Token**: POST `/api/users/refresh-token` validates `refreshToken` against `user.refreshToken`, issues new JWT.
-   - **Logout**: POST `/api/users/logout` clears `user.refreshToken`.
+   - **Register**: `POST /api/users/register` creates `user` and `profile` (email, hashed password, name). Returns JWT (15-min expiry), refresh token (7-day expiry).
+   - **Login**: `POST /api/users/login` (5 attempts/15 min) validates credentials, returns JWT, refresh token.
+   - **Refresh Token**: `POST /api/users/refresh-token` validates refresh token, issues new JWT.
+   - **Logout**: `POST /api/users/logout` clears refresh token.
    - **Password Reset**:
-     - POST `/api/users/password/reset/request` (rate-limited: 3 attempts/hour) sends 6-digit OTP to `email` via Gmail, creates `otp` and `notification`.
-     - POST `/api/users/password/reset/verify` (rate-limited: 3 attempts/hour) validates OTP, updates `password`, deletes `otp`.
-     - Returns 503 if email service fails (e.g., Gmail SMTP issue).
+     - `POST /api/users/password/reset/request` (3 attempts/hour) sends OTP via Gmail, creates `otp`, `notification`.
+     - `POST /api/users/password/reset/verify` validates OTP, updates password.
+     - Returns 503 on email failure.
 
 2. **Setup**:
-   - User creates `home`, `room` (with user-defined `name` and optional `energy_threshold`), and `appliance` (with user-defined `name`, `type`, and optional `energy_threshold`) via POST `/api/homes`, `/api/rooms`, `/api/appliances`.
-   - Validate `room.name` and `appliance.name` for uniqueness per `homeId`, non-empty, max 50 chars; `appliance.type` for non-empty, max 50 chars if provided.
+   - Create `home` (`POST /api/homes`), `room` (`POST /api/rooms`, unique name per `homeId`), `appliance` (`POST /api/appliances`, unique name per `homeId`, optional `energy_threshold`).
+   - ESP32 fetches appliances via `GET /api/appliances` or hardcodes IDs.
 
 3. **Record Energy Reading**:
-   - POST `/api/energy` saves `energyReading` with PZEM-004T data (`energy`, `power`, `current`, `voltage`).
-   - Calculate `cost = energy * BILLING_RATE` (from `env.js`, default 10 PHP/kWh).
+   - ESP32 posts to `POST /api/energy` (100 posts/hour limit):
+     - **Real Data**: For one appliance (e.g., Smart Bulb) using PZEM-004T (`is_randomized: false`, updates `last_monitored_at`).
+     - **Randomized Data**: For other appliances (e.g., Fridge, AC) with simulated data (`is_randomized: true`).
+   - Validates: `applianceId`, `homeId`, `userId`, ranges (e.g., `energy: 0-100 kWh`, `power: 0-5000 W`).
+   - Sets `is_on: power > 0`, `cost: energy * BILLING_RATE`.
+   - Saves to `energyReading`, triggers `energySummary` update.
 
 4. **Precompute Summaries**:
-   - `energyService.js` aggregates `energyReading` into `energySummary` for daily/weekly/monthly periods by `homeId`, `roomId`, `applianceId`.
-   - Example: Sum `energy` into `total_energy`, average `power` into `avg_power`, sum `cost` into `total_cost`.
+   - `energyService.js` aggregates `energyReading` into `energySummary` (daily/weekly/monthly):
+     - `total_energy`: Sum of `energy`.
+     - `avg_power`: Average of `power`.
+     - `total_cost`: Sum of `cost`.
+     - `active_time_percentage`: `(count of is_on: true / reading_count) * 100`.
+     - Uses UTC for `period_start/end`.
 
-5. **Anomaly Detection**:
-   - During `energySummary` precomputation, check if `total_energy` exceeds `energy_threshold` (from `appliance`, `room`, or `constants.js HIGH_ENERGY_THRESHOLD`).
-   - Create `anomalyAlert` with `alert_type` (e.g., "high_energy"), `description`, `recommended_action`, and `severity`.
+5. **Anomaly Detection (Prepared)**:
+   - During `energySummary` update, check if `total_energy > energy_threshold` (from `appliance`, `room`, or `constants.js HIGH_ENERGY_THRESHOLD`) for `is_randomized: false`.
+   - Create `anomalyAlert` (e.g., "high_energy", "Smart bulb used 15 kWh > 10 kWh").
 
-6. **Notifications**:
-   - For each `anomalyAlert`, create `notification` with user-preferred `channels` (from `profile.notification_preferences`) and `message`.
-   - For monthly `energySummary` (home-level), create `notification` with `channels: ["bill_reminder", "email"]`, `due_date` (end of month + 5 days).
-   - Email notifications: Generate `otp`, send to `user.email` via Gmail, await POST `/api/notifications/verify-otp`, then send full notification.
-   - In-app notifications: Display via GET `/api/notifications`.
+6. **Notifications (Prepared)**:
+   - For `anomalyAlert`, create `notification` with user’s `notification_preferences` (e.g., ["email", "in-app"]).
+   - For monthly `energySummary`, create bill reminder (`channels: ["bill_reminder", "email"]`, `due_date: end of month + 5 days`).
+   - Email: Generate `otp`, send to `user.email`, await `POST /api/notifications/verify-otp`.
+   - In-app: Display via `GET /api/notifications`.
 
 7. **User Actions**:
-   - Verify OTP (POST `/api/notifications/verify-otp`) for email notifications.
-   - Acknowledge notifications (POST `/api/notifications/:id/acknowledge).
-   - View energy consumption (GET `/api/energy/home`, `/api/energy/room`, `/api/energy/appliance`) and history (GET `/api/energy).
-   - Update profile (PUT `/api/users/profile`) or user (PUT `/api/users`) with rate-limited password reset.
+   - View energy history: `GET /api/energy` (filter by `homeId`, `applianceId`, `is_randomized`, `is_on`).
+   - View summaries: `GET /api/energy/summary` (filter by `period_type`, `applianceId`).
+   - Verify OTP: `POST /api/notifications/verify-otp`.
+   - Acknowledge notifications: `POST /api/notifications/:id/acknowledge`.
+   - Update profile: `PUT /api/users/profile`.
 
 ## API Response Examples
 
 ### 1. Register User
 **POST /api/users/register**
-
 ```json
 {
   "email": "user@example.com",
@@ -259,64 +328,42 @@ nodemon server.js
   "name": "Ace Philip"
 }
 ```
-
 **Response**
-
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "507f1f77bcf86cd799439011",
-    "email": "user@example.com",
-    "name": "Ace Philip"
-  }
+  "user": { "id": "507f1f77bcf86cd799439011", "email": "user@example.com", "name": "Ace Philip" }
 }
 ```
 
 ### 2. Login
-**POST /api/users/login** (rate-limited: 5 attempts/15 min)
-
+**POST /api/users/login** (5 attempts/15 min)
 ```json
 {
   "email": "user@example.com",
   "password": "securepassword123"
 }
 ```
-
 **Response**
-
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "507f1f77bcf86cd799439011",
-    "email": "user@example.com",
-    "name": "Ace Philip"
-  }
+  "user": { "id": "507f1f77bcf86cd799439011", "email": "user@example.com", "name": "Ace Philip" }
 }
 ```
-
-**Error (Rate Limit Exceeded)**
-
+**Error**
 ```json
-{
-  "error": "Too many login attempts, please try again after 15 minutes"
-}
+{ "error": "Too many login attempts, please try again after 15 minutes" }
 ```
 
 ### 3. Refresh Token
 **POST /api/users/refresh-token**
-
 ```json
-{
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
+{ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
 ```
-
 **Response**
-
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -325,42 +372,21 @@ nodemon server.js
 ```
 
 ### 4. Request Password Reset
-**POST /api/users/password/reset/request** (rate-limited: 3 attempts/hour)
-
+**POST /api/users/password/reset/request** (3 attempts/hour)
 ```json
-{
-  "email": "user@example.com"
-}
+{ "email": "user@example.com" }
 ```
-
 **Response**
-
 ```json
-{
-  "message": "OTP sent to your email"
-}
+{ "message": "OTP sent to your email" }
 ```
-
-**Error (Rate Limit Exceeded)**
-
+**Error**
 ```json
-{
-  "error": "Too many OTP requests, please try again after 1 hour"
-}
-```
-
-**Error (Email Failure)**
-
-```json
-{
-  "error": "Email service unavailable",
-  "details": "Failed to send OTP"
-}
+{ "error": "Too many OTP requests, please try again after 1 hour" }
 ```
 
 ### 5. Verify Password Reset
-**POST /api/users/password/reset/verify** (rate-limited: 3 attempts/hour)
-
+**POST /api/users/password/reset/verify** (3 attempts/hour)
 ```json
 {
   "email": "user@example.com",
@@ -368,35 +394,20 @@ nodemon server.js
   "newPassword": "newsecurepassword123"
 }
 ```
-
 **Response**
-
 ```json
-{
-  "message": "Password reset successful"
-}
-```
-
-**Error (Rate Limit Exceeded)**
-
-```json
-{
-  "error": "Too many OTP requests, please try again after 1 hour"
-}
+{ "message": "Password reset successful" }
 ```
 
 ### 6. Create Home
 **POST /api/homes**
-
 ```json
 {
   "userId": "507f1f77bcf86cd799439011",
   "name": "Main House"
 }
 ```
-
 **Response**
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439012",
@@ -407,7 +418,6 @@ nodemon server.js
 
 ### 7. Create Room
 **POST /api/rooms**
-
 ```json
 {
   "homeId": "507f1f77bcf86cd799439012",
@@ -416,9 +426,7 @@ nodemon server.js
   "energy_threshold": 50
 }
 ```
-
 **Response**
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439013",
@@ -431,7 +439,6 @@ nodemon server.js
 
 ### 8. Create Appliance
 **POST /api/appliances**
-
 ```json
 {
   "homeId": "507f1f77bcf86cd799439012",
@@ -442,9 +449,7 @@ nodemon server.js
   "energy_threshold": 10
 }
 ```
-
 **Response**
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439014",
@@ -453,29 +458,48 @@ nodemon server.js
   "roomId": "507f1f77bcf86cd799439013",
   "name": "smart bulb",
   "type": "custom lighting",
-  "energy_threshold": 10
+  "energy_threshold": 10,
+  "last_monitored_at": null
 }
 ```
 
-### 9. Create Energy Reading
-**POST /api/energy**
+### 9. Get Appliances (for ESP32)
+**GET /api/appliances?homeId=507f1f77bcf86cd799439012**
+**Response**
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439014",
+    "name": "smart bulb",
+    "roomId": "507f1f77bcf86cd799439013",
+    "last_monitored_at": "2025-10-22T08:00:00Z"
+  },
+  {
+    "_id": "fridge_id",
+    "name": "fridge",
+    "roomId": "kitchen_id",
+    "last_monitored_at": null
+  }
+]
+```
 
+### 10. Create Energy Reading
+**POST /api/energy**
 ```json
 {
   "homeId": "507f1f77bcf86cd799439012",
   "userId": "507f1f77bcf86cd799439011",
   "applianceId": "507f1f77bcf86cd799439014",
   "roomId": "507f1f77bcf86cd799439013",
-  "energy": 15,
-  "power": 100,
-  "current": 0.5,
+  "energy": 0.1,
+  "power": 60,
+  "current": 0.27,
   "voltage": 220,
-  "recorded_at": "2025-10-07T10:00:00Z"
+  "recorded_at": "2025-10-22T08:00:00Z",
+  "is_randomized": false
 }
 ```
-
-**Response** (triggers `energySummary` update)
-
+**Response**
 ```json
 {
   "_id": "507f1f77bcf86cd799439015",
@@ -483,18 +507,36 @@ nodemon server.js
   "userId": "507f1f77bcf86cd799439011",
   "applianceId": "507f1f77bcf86cd799439014",
   "roomId": "507f1f77bcf86cd799439013",
-  "energy": 15,
-  "power": 100,
-  "current": 0.5,
+  "energy": 0.1,
+  "power": 60,
+  "current": 0.27,
   "voltage": 220,
-  "cost": 150,
-  "recorded_at": "2025-10-07T10:00:00Z"
+  "cost": 1,
+  "recorded_at": "2025-10-22T08:00:00Z",
+  "is_on": true,
+  "is_randomized": false
 }
 ```
 
-### 10. Precomputed Energy Summary
-**Internal Update**
+### 11. Get Energy Readings
+**GET /api/energy?applianceId=507f1f77bcf86cd799439014&is_randomized=false**
+**Response**
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439015",
+    "applianceId": "507f1f77bcf86cd799439014",
+    "energy": 0.1,
+    "power": 60,
+    "is_on": true,
+    "is_randomized": false,
+    "recorded_at": "2025-10-22T08:00:00Z"
+  }
+]
+```
 
+### 12. Precomputed Energy Summary
+**Internal Update**
 ```json
 {
   "_id": "507f1f77bcf86cd799439016",
@@ -508,13 +550,13 @@ nodemon server.js
   "total_energy": 15,
   "avg_power": 90,
   "total_cost": 150,
-  "reading_count": 5
+  "reading_count": 5,
+  "active_time_percentage": 100
 }
 ```
 
-### 11. Anomaly Alert (High Energy)
-**Internal Creation** (triggered by `total_energy > energy_threshold`)
-
+### 13. Anomaly Alert (High Energy)
+**Internal Creation**
 ```json
 {
   "_id": "507f1f77bcf86cd799439017",
@@ -527,14 +569,13 @@ nodemon server.js
   "description": "Smart bulb in home office used 15 kWh this month, exceeding threshold of 10 kWh",
   "recommended_action": "Check for malfunction or reduce usage",
   "severity": "medium",
-  "detected_at": "2025-10-07T12:00:00Z",
+  "detected_at": "2025-10-22T12:00:00Z",
   "status": "active"
 }
 ```
 
-### 12. Notification (Anomaly, Multi-Channel)
+### 14. Notification (Anomaly, Multi-Channel)
 **Internal Creation**
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439018",
@@ -545,36 +586,32 @@ nodemon server.js
   "message": "High energy usage in home office smart bulb: 15 kWh. Check for malfunction or reduce usage.",
   "status": "pending",
   "sent_at": null,
-  "created_at": "2025-10-07T12:01:00Z",
+  "created_at": "2025-10-22T12:01:00Z",
   "due_date": null
 }
 ```
 
-### 13. OTP for Email Notification
-**Internal Creation** (sent to `user.email`, e.g., `user@example.com`)
-
+### 15. OTP for Email Notification
+**Internal Creation**
 ```json
 {
   "_id": "507f1f77bcf86cd799439020",
   "userId": "507f1f77bcf86cd799439011",
   "notificationId": "507f1f77bcf86cd799439018",
   "otp": "123456",
-  "expires_at": "2025-10-07T12:11:00Z"
+  "expires_at": "2025-10-22T12:11:00Z"
 }
 ```
 
-### 14. Verify OTP
+### 16. Verify OTP
 **POST /api/notifications/verify-otp**
-
 ```json
 {
   "notificationId": "507f1f77bcf86cd799439018",
   "otp": "123456"
 }
 ```
-
 **Response**
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439018",
@@ -584,15 +621,14 @@ nodemon server.js
   "channels": ["email", "in-app"],
   "message": "High energy usage in home office smart bulb: 15 kWh. Check for malfunction or reduce usage.",
   "status": "sent",
-  "sent_at": "2025-10-07T12:02:00Z",
-  "created_at": "2025-10-07T12:01:00Z",
+  "sent_at": "2025-10-22T12:02:00Z",
+  "created_at": "2025-10-22T12:01:00Z",
   "due_date": null
 }
 ```
 
-### 15. Bill Reminder Notification
+### 17. Bill Reminder Notification
 **Internal Creation** (cron job, end of October)
-
 ```json
 {
   "_id": "507f1f77bcf86cd799439019",
@@ -608,9 +644,9 @@ nodemon server.js
 }
 ```
 
-### 16. Fetch Notifications
+### 18. Fetch Notifications
 **GET /api/notifications?status=pending**
-
+**Response**
 ```json
 [
   {
@@ -621,9 +657,7 @@ nodemon server.js
     "channels": ["email", "in-app"],
     "message": "High energy usage in home office smart bulb: 15 kWh. Check for malfunction or reduce usage.",
     "status": "pending",
-    "sent_at": null,
-    "created_at": "2025-10-07T12:01:00Z",
-    "due_date": null,
+    "created_at": "2025-10-22T12:01:00Z",
     "alert": {
       "home": "Main House",
       "room": "home office",
@@ -641,7 +675,6 @@ nodemon server.js
     "channels": ["bill_reminder", "email"],
     "message": "Your October bill for Main House of 257 PHP is due by 2025-11-05",
     "status": "pending",
-    "sent_at": null,
     "created_at": "2025-10-31T23:59:59Z",
     "due_date": "2025-11-05T23:59:59Z"
   }
@@ -652,35 +685,45 @@ nodemon server.js
 
 ```javascript
 module.exports = {
-  MAX_NAME_LENGTH: 50, // Max length for home.name, room.name, appliance.name, appliance.type
+  MAX_NAME_LENGTH: 50,
   UNIQUE_SCOPES: {
-    room: ["name", "homeId"], // Ensure room.name is unique per homeId
-    appliance: ["name", "homeId"] // Ensure appliance.name is unique per homeId
+    room: ["name", "homeId"],
+    appliance: ["name", "homeId"]
   },
   ALERT_TYPES: ["high_energy", "high_cost", "unusual_spike"],
   SEVERITY_LEVELS: ["low", "medium", "high"],
   NOTIFICATION_TYPES: ["email", "push", "in-app", "bill_reminder"],
   PERIOD_TYPES: ["daily", "weekly", "monthly"],
-  HIGH_ENERGY_THRESHOLD: 50, // kWh, default for anomaly detection
-  OTP_EXPIRY_MINUTES: 10 // OTP expiration time
+  HIGH_ENERGY_THRESHOLD: 50, // kWh
+  OTP_EXPIRY_MINUTES: 10,
+  ENERGY_POST_RATE_LIMIT: 100, // Posts per hour
+  VALID_ENERGY_RANGES: {
+    energy: { min: 0, max: 100 }, // kWh
+    power: { min: 0, max: 5000 }, // Watts
+    current: { min: 0, max: 50 }, // Amps
+    voltage: { min: 0, max: 300 } // Volts
+  }
 };
 ```
 
 ## Security Features
-- **Authentication**: JWT (15-minute expiry) and refresh tokens (7-day expiry, stored in MongoDB).
+- **Authentication**: JWT (15-min expiry), refresh tokens (7-day expiry, stored in MongoDB).
 - **Rate Limiting**:
-  - `/api/users/login`: 5 attempts per 15 minutes per IP (429 error: "Too many login attempts, please try again after 15 minutes").
-  - `/api/users/password/reset/request` and `/api/users/password/reset/verify`: 3 attempts per hour per IP (429 error: "Too many OTP requests, please try again after 1 hour").
-- **Password Hashing**: `bcrypt` for secure password storage.
-- **Input Validation**: Middleware ensures valid `email`, `password`, `name`, etc.
-- **Email Notifications**: OTPs sent via Gmail with 503 error on email service failure.
+  - `/api/users/login`: 5 attempts/15 min.
+  - `/api/users/password/reset/*`: 3 attempts/hour.
+  - `/api/energy`: 100 posts/hour.
+  - 429 errors on limit exceed.
+- **Password Hashing**: `bcrypt`.
+- **Input Validation**: Ensures valid IDs, ranges, ownership.
+- **Email Notifications**: OTP via Gmail, 503 on failure.
 
 ## Dependencies
 - **Backend**: `express`, `mongoose`, `bcryptjs`, `jsonwebtoken`, `express-rate-limit`, `nodemailer`, `multer`.
-- **Removed**: `redis` (previously used for caching and refresh tokens).
+- **Removed**: `redis`.
 
 ## Notes
-- All endpoints require authentication via `Authorization: Bearer <token>` except `/register`, `/login`, `/password/reset/request`, and `/password/reset/verify`.
-- MongoDB stores all data (users, refresh tokens, profiles, OTPs, notifications).
-- Logs are written to `backend/logs/` for debugging.
-- Gmail App Password required for `EMAIL_PASS` in `env.js` if 2FA is enabled.
+- Authentication required (`Authorization: Bearer <token>`) except for `/register`, `/login`, `/password/reset/*`.
+- MongoDB stores all data.
+- Logs in `backend/logs/`.
+- Gmail App Password required for `EMAIL_PASS` if 2FA enabled.
+- ESP32 posts real data for one appliance, randomized for others.
