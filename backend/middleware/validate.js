@@ -1,20 +1,24 @@
 const Joi = require('joi');
 const constants = require('../utils/constants');
 
-// Validate MAX_NAME_LENGTH
 const MAX_NAME_LENGTH = Number.isInteger(constants.MAX_NAME_LENGTH) && constants.MAX_NAME_LENGTH > 0 
   ? constants.MAX_NAME_LENGTH 
   : 50;
 
-// Validate NOTIFICATION_TYPES
 const NOTIFICATION_TYPES = Array.isArray(constants.NOTIFICATION_TYPES) 
   ? constants.NOTIFICATION_TYPES 
   : ['email', 'push', 'in-app', 'bill_reminder'];
 
-// Validate OTP_LENGTH
 const OTP_LENGTH = Number.isInteger(constants.OTP_LENGTH) && constants.OTP_LENGTH > 0 
   ? constants.OTP_LENGTH 
   : 6;
+
+const VALID_ENERGY_RANGES = constants.VALID_ENERGY_RANGES || {
+  energy: { min: 0, max: 100 },
+  power: { min: 0, max: 5000 },
+  current: { min: 0, max: 50 },
+  voltage: { min: 0, max: 300 }
+};
 
 const registerSchema = Joi.object({
   email: Joi.string()
@@ -269,34 +273,42 @@ const energyReadingSchema = Joi.object({
       'string.pattern.base': 'Invalid roomId format'
     }),
   energy: Joi.number()
-    .min(0)
+    .min(VALID_ENERGY_RANGES.energy.min)
+    .max(VALID_ENERGY_RANGES.energy.max)
     .required()
     .messages({
-      'number.min': 'Energy must be non-negative',
+      'number.min': `Energy must be at least ${VALID_ENERGY_RANGES.energy.min} kWh`,
+      'number.max': `Energy cannot exceed ${VALID_ENERGY_RANGES.energy.max} kWh`,
       'number.base': 'Energy must be a number',
       'any.required': 'Energy is required'
     }),
   power: Joi.number()
-    .min(0)
+    .min(VALID_ENERGY_RANGES.power.min)
+    .max(VALID_ENERGY_RANGES.power.max)
     .required()
     .messages({
-      'number.min': 'Power must be non-negative',
+      'number.min': `Power must be at least ${VALID_ENERGY_RANGES.power.min} W`,
+      'number.max': `Power cannot exceed ${VALID_ENERGY_RANGES.power.max} W`,
       'number.base': 'Power must be a number',
       'any.required': 'Power is required'
     }),
   current: Joi.number()
-    .min(0)
+    .min(VALID_ENERGY_RANGES.current.min)
+    .max(VALID_ENERGY_RANGES.current.max)
     .required()
     .messages({
-      'number.min': 'Current must be non-negative',
+      'number.min': `Current must be at least ${VALID_ENERGY_RANGES.current.min} A`,
+      'number.max': `Current cannot exceed ${VALID_ENERGY_RANGES.current.max} A`,
       'number.base': 'Current must be a number',
       'any.required': 'Current is required'
     }),
   voltage: Joi.number()
-    .min(0)
+    .min(VALID_ENERGY_RANGES.voltage.min)
+    .max(VALID_ENERGY_RANGES.voltage.max)
     .required()
     .messages({
-      'number.min': 'Voltage must be non-negative',
+      'number.min': `Voltage must be at least ${VALID_ENERGY_RANGES.voltage.min} V`,
+      'number.max': `Voltage cannot exceed ${VALID_ENERGY_RANGES.voltage.max} V`,
       'number.base': 'Voltage must be a number',
       'any.required': 'Voltage is required'
     }),
@@ -305,17 +317,24 @@ const energyReadingSchema = Joi.object({
     .optional()
     .messages({
       'date.format': 'recorded_at must be in ISO format (e.g., 2025-10-07T10:00:00Z)'
+    }),
+  is_randomized: Joi.boolean()
+    .optional()
+    .messages({
+      'boolean.base': 'is_randomized must be a boolean'
     })
 });
 
-// Middleware wrappers
+const energyReadingsBatchSchema = Joi.array().items(energyReadingSchema).min(1).messages({
+  'array.min': 'At least one energy reading is required'
+});
+
 const validateMiddleware = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
   next();
 };
 
-// Define individual middleware functions
 const validateRegisterMiddleware = validateMiddleware(registerSchema);
 const validateLoginMiddleware = validateMiddleware(loginSchema);
 const validateUpdateProfileMiddleware = validateMiddleware(updateProfileSchema);
@@ -327,6 +346,7 @@ const validateUpdateRoomMiddleware = validateMiddleware(updateRoomSchema);
 const validateApplianceMiddleware = validateMiddleware(applianceSchema);
 const validateUpdateApplianceMiddleware = validateMiddleware(updateApplianceSchema);
 const validateEnergyReadingMiddleware = validateMiddleware(energyReadingSchema);
+const validateEnergyReadingsBatchMiddleware = validateMiddleware(energyReadingsBatchSchema);
 
 module.exports = {
   validateRegisterMiddleware,
@@ -339,5 +359,6 @@ module.exports = {
   validateUpdateRoomMiddleware,
   validateApplianceMiddleware,
   validateUpdateApplianceMiddleware,
-  validateEnergyReadingMiddleware
+  validateEnergyReadingMiddleware,
+  validateEnergyReadingsBatchMiddleware
 };

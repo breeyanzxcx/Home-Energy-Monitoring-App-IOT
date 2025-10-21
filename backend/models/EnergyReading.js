@@ -11,7 +11,6 @@ try {
 
 let { BILLING_RATE } = env;
 
-// Fallback for BILLING_RATE
 if (typeof BILLING_RATE === 'undefined' || isNaN(BILLING_RATE)) {
   logger.warn('BILLING_RATE is undefined or invalid in EnergyReading.js, defaulting to 10');
   BILLING_RATE = 10;
@@ -67,6 +66,16 @@ const energyReadingSchema = new mongoose.Schema({
   recorded_at: {
     type: Date,
     default: Date.now
+  },
+  is_on: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
+  is_randomized: {
+    type: Boolean,
+    required: true,
+    default: false
   }
 });
 
@@ -85,5 +94,10 @@ energyReadingSchema.pre('save', function (next) {
     next(err);
   }
 });
+
+// Indexes for performance
+energyReadingSchema.index({ applianceId: 1, recorded_at: -1 });
+energyReadingSchema.index({ userId: 1, homeId: 1, is_randomized: 1 });
+energyReadingSchema.index({ is_on: 1 });
 
 module.exports = mongoose.model('EnergyReading', energyReadingSchema);
