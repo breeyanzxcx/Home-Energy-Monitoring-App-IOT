@@ -127,7 +127,7 @@ const passwordResetVerifySchema = Joi.object({
 
 const roomSchema = Joi.object({
   homeId: Joi.string()
-    .regex(/^[0-9a-fA-F]{24}$/) // Mongo ObjectId format
+    .regex(/^[0-9a-fA-F]{24}$/)
     .required()
     .messages({
       'string.pattern.base': 'Invalid homeId format',
@@ -247,6 +247,67 @@ const updateApplianceSchema = Joi.object({
   'object.min': 'At least one field to update is required'
 });
 
+const energyReadingSchema = Joi.object({
+  homeId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Invalid homeId format',
+      'string.empty': 'homeId is required'
+    }),
+  applianceId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      'string.pattern.base': 'Invalid applianceId format',
+      'string.empty': 'applianceId is required'
+    }),
+  roomId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'Invalid roomId format'
+    }),
+  energy: Joi.number()
+    .min(0)
+    .required()
+    .messages({
+      'number.min': 'Energy must be non-negative',
+      'number.base': 'Energy must be a number',
+      'any.required': 'Energy is required'
+    }),
+  power: Joi.number()
+    .min(0)
+    .required()
+    .messages({
+      'number.min': 'Power must be non-negative',
+      'number.base': 'Power must be a number',
+      'any.required': 'Power is required'
+    }),
+  current: Joi.number()
+    .min(0)
+    .required()
+    .messages({
+      'number.min': 'Current must be non-negative',
+      'number.base': 'Current must be a number',
+      'any.required': 'Current is required'
+    }),
+  voltage: Joi.number()
+    .min(0)
+    .required()
+    .messages({
+      'number.min': 'Voltage must be non-negative',
+      'number.base': 'Voltage must be a number',
+      'any.required': 'Voltage is required'
+    }),
+  recorded_at: Joi.date()
+    .iso()
+    .optional()
+    .messages({
+      'date.format': 'recorded_at must be in ISO format (e.g., 2025-10-07T10:00:00Z)'
+    })
+});
+
 // Middleware wrappers
 const validateMiddleware = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);
@@ -254,15 +315,29 @@ const validateMiddleware = (schema) => (req, res, next) => {
   next();
 };
 
+// Define individual middleware functions
+const validateRegisterMiddleware = validateMiddleware(registerSchema);
+const validateLoginMiddleware = validateMiddleware(loginSchema);
+const validateUpdateProfileMiddleware = validateMiddleware(updateProfileSchema);
+const validateHomeMiddleware = validateMiddleware(homeSchema);
+const validatePasswordResetRequestMiddleware = validateMiddleware(passwordResetRequestSchema);
+const validatePasswordResetVerifyMiddleware = validateMiddleware(passwordResetVerifySchema);
+const validateRoomMiddleware = validateMiddleware(roomSchema);
+const validateUpdateRoomMiddleware = validateMiddleware(updateRoomSchema);
+const validateApplianceMiddleware = validateMiddleware(applianceSchema);
+const validateUpdateApplianceMiddleware = validateMiddleware(updateApplianceSchema);
+const validateEnergyReadingMiddleware = validateMiddleware(energyReadingSchema);
+
 module.exports = {
-  validateRegisterMiddleware: validateMiddleware(registerSchema),
-  validateLoginMiddleware: validateMiddleware(loginSchema),
-  validateUpdateProfileMiddleware: validateMiddleware(updateProfileSchema),
-  validateHomeMiddleware: validateMiddleware(homeSchema),
-  validatePasswordResetRequestMiddleware: validateMiddleware(passwordResetRequestSchema),
-  validatePasswordResetVerifyMiddleware: validateMiddleware(passwordResetVerifySchema),
-  validateRoomMiddleware: validateMiddleware(roomSchema),
-  validateUpdateRoomMiddleware: validateMiddleware(updateRoomSchema),
-  validateApplianceMiddleware: validateMiddleware(applianceSchema),
-  validateUpdateApplianceMiddleware: validateMiddleware(updateApplianceSchema)
+  validateRegisterMiddleware,
+  validateLoginMiddleware,
+  validateUpdateProfileMiddleware,
+  validateHomeMiddleware,
+  validatePasswordResetRequestMiddleware,
+  validatePasswordResetVerifyMiddleware,
+  validateRoomMiddleware,
+  validateUpdateRoomMiddleware,
+  validateApplianceMiddleware,
+  validateUpdateApplianceMiddleware,
+  validateEnergyReadingMiddleware
 };

@@ -7,6 +7,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
 const roomRoutes = require('./routes/roomRoutes');
 const applianceRoutes = require('./routes/applianceRoutes');
+const energyRoutes = require('./routes/energyRoutes');
 const app = express();
 
 // Middleware
@@ -23,6 +24,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/homes', require('./routes/homeRoutes'));
 app.use('/api/rooms', roomRoutes);
 app.use('/api/appliances', applianceRoutes);
+app.use('/api/energy', energyRoutes);
 
 // Error handler
 app.use(errorHandler);

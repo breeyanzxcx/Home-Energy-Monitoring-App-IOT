@@ -8,7 +8,6 @@ module.exports = {
   SEVERITY_LEVELS: ["low", "medium", "high"],
   NOTIFICATION_TYPES: ["email", "push", "in-app", "bill_reminder"],
   PERIOD_TYPES: ["daily", "weekly", "monthly"],
-  BILLING_RATE: 10,
   HIGH_ENERGY_THRESHOLD: 50,
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png'],
   MAX_FILE_SIZE: 5 * 1024 * 1024,

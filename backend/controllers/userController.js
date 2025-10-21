@@ -46,7 +46,7 @@ exports.register = async (req, res) => {
       logger.error('JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
       return res.status(500).json({ error: 'Server configuration error' });
     }
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '15m' });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1m' });
     const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     user.refreshToken = refreshToken;
     await user.save();
@@ -97,7 +97,7 @@ exports.login = async (req, res) => {
       logger.error('JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
       return res.status(500).json({ error: 'Server configuration error' });
     }
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '15m' });
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1m' });
     const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     await User.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
 
@@ -132,7 +132,7 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    const newToken = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '15m' });
+    const newToken = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1m' });
     logger.info(`Token refreshed for user: ${user._id}`);
     res.status(200).json({ token: newToken, refreshToken });
   } catch (err) {
