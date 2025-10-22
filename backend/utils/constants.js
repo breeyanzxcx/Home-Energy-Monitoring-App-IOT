@@ -14,6 +14,7 @@ module.exports = {
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   OTP_LENGTH: 6,
   OTP_EXPIRY_MINUTES: 10,
+  BILLING_DUE_DAYS: 5,
   ENERGY_POST_RATE_LIMIT: 100,
   VALID_ENERGY_RANGES: {
     energy: { min: 0, max: 100 }, // kWh

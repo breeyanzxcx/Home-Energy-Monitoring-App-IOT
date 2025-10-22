@@ -9,22 +9,45 @@ const { BILLING_DUE_DAYS, NOTIFICATION_TYPES } = require('../utils/constants');
 async function generateBillingReminders() {
   try {
     const now = new Date();
-    if (!isLastDayOfMonth(now)) {
-      logger.info('Not the last day of the month, skipping billing reminders');
-      return;
-    }
+    // Temporarily bypass isLastDayOfMonth for testing
+    // if (!isLastDayOfMonth(now)) {
+    //   logger.info('Not the last day of the month, skipping billing reminders');
+    //   return;
+    // }
+    logger.info('Bypassing last day of month check for testing billing reminders');
 
+    // Use UTC for periodEnd
     const periodEnd = endOfMonth(now);
+    const queryStart = new Date(Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), periodEnd.getUTCDate(), 0, 0, 0, 0));
+    const queryEnd = new Date(Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), periodEnd.getUTCDate(), 23, 59, 59, 999));
+    logger.info(`Querying EnergySummary with period_end range: ${queryStart.toISOString()} to ${queryEnd.toISOString()}`);
+
     const summaries = await EnergySummary.find({
       period_type: 'monthly',
-      period_end: periodEnd,
+      period_end: {
+        $gte: queryStart,
+        $lte: queryEnd,
+      },
       total_cost: { $gt: 0 },
     }).populate('homeId userId');
 
-    logger.info(`Found ${summaries.length} summaries for billing reminders`);
+    logger.info(`Found ${summaries.length} summaries for billing reminders`, {
+      summaries: summaries.map(s => ({
+        _id: s._id.toString(),
+        period_end: s.period_end.toISOString(),
+        total_cost: s.total_cost,
+        homeId: s.homeId ? s.homeId._id.toString() : null,
+        userId: s.userId ? s.userId._id.toString() : null,
+      })),
+    });
 
     for (const summary of summaries) {
       const { homeId, userId, total_energy, total_cost } = summary;
+      if (!homeId || !userId) {
+        logger.error(`Invalid homeId or userId for summary ${summary._id}`);
+        continue;
+      }
+
       const profile = await Profile.findOne({ userId: userId._id });
       if (!profile) {
         logger.error(`No profile found for user ${userId._id}`);
