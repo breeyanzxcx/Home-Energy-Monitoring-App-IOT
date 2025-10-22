@@ -9,6 +9,7 @@ module.exports = {
   NOTIFICATION_TYPES: ["email", "push", "in-app", "bill_reminder"],
   PERIOD_TYPES: ["daily", "weekly", "monthly"],
   HIGH_ENERGY_THRESHOLD: 50,
+  HIGH_COST_THRESHOLD: 100,
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png'],
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   OTP_LENGTH: 6,

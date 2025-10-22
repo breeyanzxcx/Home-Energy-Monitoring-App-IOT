@@ -2,6 +2,7 @@ const EnergyReading = require('../models/EnergyReading');
 const EnergySummary = require('../models/EnergySummary');
 const Appliance = require('../models/Appliance');
 const AnomalyAlert = require('../models/AnomalyAlert');
+const notificationService = require('./notificationService');
 const { logger } = require('../utils/logger');
 const { PERIOD_TYPES, HIGH_ENERGY_THRESHOLD } = require('../utils/constants');
 
@@ -50,7 +51,7 @@ const saveEnergyReading = async (readingData) => {
 
 const computeEnergySummary = async (energyReading) => {
   try {
-    const { homeId, userId, applianceId, roomId, recorded_at } = energyReading;
+    const { homeId, userId, applianceId, roomId, recorded_at, power } = energyReading;
 
     for (const period_type of PERIOD_TYPES) {
       let periodStart, periodEnd;
@@ -117,24 +118,102 @@ const computeEnergySummary = async (energyReading) => {
       logger.info(`Energy summary updated for appliance: ${applianceId}, period: ${period_type}`);
 
       // Anomaly detection (only for real data)
-      if (!energyReading.is_randomized && period_type === 'monthly') {
+      if (!energyReading.is_randomized) {
         const appliance = await Appliance.findById(applianceId);
-        const threshold = appliance?.energy_threshold || HIGH_ENERGY_THRESHOLD;
-        if (total_energy > threshold) {
-          const alert = new AnomalyAlert({
-            userId,
-            homeId,
+        const readingCount = await EnergyReading.countDocuments({ applianceId });
+
+        // Skip anomalies for appliances with insufficient data (<7 days)
+        if (readingCount < 7) {
+          logger.info(`Skipping anomaly detection for appliance ${applianceId}: insufficient data (${readingCount} readings)`);
+          continue;
+        }
+
+        // High energy anomaly (monthly)
+        if (period_type === 'monthly') {
+          const threshold = appliance?.energy_threshold || HIGH_ENERGY_THRESHOLD;
+          if (total_energy > threshold) {
+            // Debounce: Check for recent similar alert
+            const recentAlert = await AnomalyAlert.findOne({
+              applianceId,
+              alert_type: 'high_energy',
+              detected_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+            });
+
+            if (!recentAlert) {
+              const alert = new AnomalyAlert({
+                userId,
+                homeId,
+                applianceId,
+                roomId,
+                energySummaryId: summary._id,
+                alert_type: 'high_energy',
+                description: `Energy usage for ${appliance?.name || 'appliance'} exceeded ${threshold} kWh: ${total_energy} kWh`,
+                recommended_action: 'Check for malfunction or reduce usage',
+                severity: total_energy > threshold * 1.5 ? 'high' : 'medium',
+                detected_at: new Date()
+              });
+              await alert.save();
+              logger.info(`Anomaly alert created for appliance: ${applianceId}, type: high_energy`);
+
+              // Trigger notification
+              const message = `Anomaly detected: ${alert.description}. Recommended: ${alert.recommended_action}`;
+              await notificationService.createNotification({
+                userId,
+                homeId,
+                anomalyAlertId: alert._id,
+                message
+              });
+              logger.info(`In-app notification triggered for anomaly: ${alert._id}`);
+            }
+          }
+        }
+
+        // Unusual spike anomaly (daily)
+        if (period_type === 'daily') {
+          const past30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const pastReadings = await EnergyReading.find({
             applianceId,
-            roomId,
-            energySummaryId: summary._id,
-            alert_type: 'high_energy',
-            description: `Energy usage for ${appliance?.name || 'appliance'} exceeded ${threshold} kWh: ${total_energy} kWh`,
-            recommended_action: 'Check for malfunction or reduce usage',
-            severity: total_energy > threshold * 1.5 ? 'high' : 'medium',
-            detected_at: new Date()
+            recorded_at: { $gte: past30Days }
           });
-          await alert.save();
-          logger.info(`Anomaly alert created for appliance: ${applianceId}`);
+          const historicalAvgPower = pastReadings.length > 0
+            ? pastReadings.reduce((sum, r) => sum + r.power, 0) / pastReadings.length
+            : 0;
+
+          if (power > 2 * historicalAvgPower && historicalAvgPower > 0) {
+            // Debounce: Check for recent similar alert
+            const recentAlert = await AnomalyAlert.findOne({
+              applianceId,
+              alert_type: 'unusual_spike',
+              detected_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+            });
+
+            if (!recentAlert) {
+              const alert = new AnomalyAlert({
+                userId,
+                homeId,
+                applianceId,
+                roomId,
+                energySummaryId: summary._id,
+                alert_type: 'unusual_spike',
+                description: `Power spike for ${appliance?.name || 'appliance'}: ${power} W exceeds 2x historical average (${historicalAvgPower} W)`,
+                recommended_action: 'Inspect appliance for potential malfunction',
+                severity: 'high',
+                detected_at: new Date()
+              });
+              await alert.save();
+              logger.info(`Anomaly alert created for appliance: ${applianceId}, type: unusual_spike`);
+
+              // Trigger notification
+              const message = `Anomaly detected: ${alert.description}. Recommended: ${alert.recommended_action}`;
+              await notificationService.createNotification({
+                userId,
+                homeId,
+                anomalyAlertId: alert._id,
+                message
+              });
+              logger.info(`In-app notification triggered for anomaly: ${alert._id}`);
+            }
+          }
         }
       }
     }

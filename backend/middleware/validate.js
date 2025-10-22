@@ -329,6 +329,22 @@ const energyReadingsBatchSchema = Joi.array().items(energyReadingSchema).min(1).
   'array.min': 'At least one energy reading is required'
 });
 
+const bulkAcknowledgeSchema = Joi.object({
+  ids: Joi.array().items(Joi.string().regex(/^[0-9a-fA-F]{24}$/)).min(1).required()
+    .messages({
+      'array.min': 'At least one ID is required',
+      'string.pattern.base': 'Invalid ID format'
+    })
+});
+
+const bulkDeleteSchema = Joi.object({
+  ids: Joi.array().items(Joi.string().regex(/^[0-9a-fA-F]{24}$/)).min(1).required()
+    .messages({
+      'array.min': 'At least one ID is required',
+      'string.pattern.base': 'Invalid ID format'
+    })
+});
+
 const validateMiddleware = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
@@ -347,6 +363,8 @@ const validateApplianceMiddleware = validateMiddleware(applianceSchema);
 const validateUpdateApplianceMiddleware = validateMiddleware(updateApplianceSchema);
 const validateEnergyReadingMiddleware = validateMiddleware(energyReadingSchema);
 const validateEnergyReadingsBatchMiddleware = validateMiddleware(energyReadingsBatchSchema);
+const validateBulkAcknowledgeMiddleware = validateMiddleware(bulkAcknowledgeSchema);
+const validateBulkDeleteMiddleware = validateMiddleware(bulkDeleteSchema);
 
 module.exports = {
   validateRegisterMiddleware,
@@ -360,5 +378,7 @@ module.exports = {
   validateApplianceMiddleware,
   validateUpdateApplianceMiddleware,
   validateEnergyReadingMiddleware,
-  validateEnergyReadingsBatchMiddleware
+  validateEnergyReadingsBatchMiddleware,
+  validateBulkAcknowledgeMiddleware,
+  validateBulkDeleteMiddleware
 };
