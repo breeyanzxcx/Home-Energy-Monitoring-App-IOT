@@ -10,7 +10,29 @@ exports.createHome = async (req, res) => {
 
     const home = new Home({ userId: req.user._id, name });
     await home.save();
-    logger.info(`Home created: ${name} for user: ${req.user._id}`);
+    
+    //default rooms for the new home
+    const defaultRooms = [
+      { name: 'Kitchen', energy_threshold: null },
+      { name: 'Living Room', energy_threshold: null },
+      { name: 'Bedroom', energy_threshold: null },
+      { name: 'Bathroom', energy_threshold: null },
+      { name: 'Office', energy_threshold: null },
+      { name: 'Garage', energy_threshold: null }
+    ];
+    
+    const roomPromises = defaultRooms.map(roomData => 
+      new Room({ 
+        homeId: home._id, 
+        userId: req.user._id, 
+        name: roomData.name, 
+        energy_threshold: roomData.energy_threshold 
+      }).save()
+    );
+    
+    await Promise.all(roomPromises);
+    
+    logger.info(`Home created: ${name} for user: ${req.user._id} with ${defaultRooms.length} default rooms`);
     res.status(201).json({ id: home._id, userId: home.userId, name: home.name, createdAt: home.createdAt });
   } catch (err) {
     logger.error('Create home error:', err.stack || err);
