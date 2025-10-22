@@ -862,27 +862,39 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
   ```json
   [
     {
-      "_id": "68f0a126c5abd0c4fb1ee203",
+      "_id": "68f7cc61b4aa22dafe8365b0",
       "homeId": {
         "_id": "68eff5fec5abd0c4fb1ee13d",
         "name": "My Home"
       },
       "userId": "68e4e888715b38034c0f8f1e",
-      "applianceId": {
-        "_id": "68eff6dfc5abd0c4fb1ee145",
-        "name": "Fridge"
-      },
-      "roomId": {
-        "_id": "68eff642c5abd0c4fb1ee141",
-        "name": "Kitchen"
-      },
+      "applianceId": null,
+      "roomId": null,
       "period_start": "2025-10-01T00:00:00Z",
       "period_end": "2025-10-31T23:59:59Z",
       "period_type": "monthly",
-      "total_energy": 90,
-      "avg_power": 1166.6666666666667,
-      "total_cost": 900,
-      "reading_count": 3,
+      "total_energy": 30.48,
+      "avg_power": 0,
+      "total_cost": 304.8,
+      "reading_count": 1,
+      "active_time_percentage": 100
+    },
+    {
+      "_id": "68f7cc61b4aa22dafe8365b3",
+      "homeId": {
+        "_id": "68eff5fec5abd0c4fb1ee13d",
+        "name": "My Home"
+      },
+      "userId": "68e4e888715b38034c0f8f1e",
+      "applianceId": null,
+      "roomId": null,
+      "period_start": "2025-10-01T00:00:00Z",
+      "period_end": "2025-10-31T23:59:59Z",
+      "period_type": "monthly",
+      "total_energy": 60.5,
+      "avg_power": 0,
+      "total_cost": 605,
+      "reading_count": 1,
       "active_time_percentage": 100
     }
   ]
@@ -900,27 +912,39 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
   ```json
   [
     {
-      "_id": "68f0a126c5abd0c4fb1ee203",
+      "_id": "68f7cc61b4aa22dafe8365b0",
       "homeId": {
         "_id": "68eff5fec5abd0c4fb1ee13d",
         "name": "My Home"
       },
       "userId": "68e4e888715b38034c0f8f1e",
-      "applianceId": {
-        "_id": "68eff6dfc5abd0c4fb1ee145",
-        "name": "Fridge"
-      },
-      "roomId": {
-        "_id": "68eff642c5abd0c4fb1ee141",
-        "name": "Kitchen"
-      },
+      "applianceId": null,
+      "roomId": null,
       "period_start": "2025-10-01T00:00:00Z",
       "period_end": "2025-10-31T23:59:59Z",
       "period_type": "monthly",
-      "total_energy": 90,
-      "avg_power": 1166.6666666666667,
-      "total_cost": 900,
-      "reading_count": 3,
+      "total_energy": 30.48,
+      "avg_power": 0,
+      "total_cost": 304.8,
+      "reading_count": 1,
+      "active_time_percentage": 100
+    },
+    {
+      "_id": "68f7cc61b4aa22dafe8365b3",
+      "homeId": {
+        "_id": "68eff5fec5abd0c4fb1ee13d",
+        "name": "My Home"
+      },
+      "userId": "68e4e888715b38034c0f8f1e",
+      "applianceId": null,
+      "roomId": null,
+      "period_start": "2025-10-01T00:00:00Z",
+      "period_end": "2025-10-31T23:59:59Z",
+      "period_type": "monthly",
+      "total_energy": 60.5,
+      "avg_power": 0,
+      "total_cost": 605,
+      "reading_count": 1,
       "active_time_percentage": 100
     }
   ]
@@ -984,7 +1008,7 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 #### 1. Get Notifications
 - **Method**: GET
 - **Endpoint**: `/`
-- **Description**: Retrieves in-app notifications with optional filters.
+- **Description**: Retrieves in-app and billing reminder notifications for the authenticated user with optional filters. Includes notifications for anomaly alerts and monthly billing reminders if the user has `email`, `in_app`, or `bill_reminder` in their `notification_preferences`.
 - **Query Parameters**:
   - `status`: Notification status (optional, e.g., `pending`, `sent`, `failed`, `acknowledged`)
   - `homeId`: Home ID (optional, e.g., `68eff5fec5abd0c4fb1ee13d`)
@@ -995,9 +1019,44 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
   {
     "notifications": [
       {
+        "_id": "<notification_id_1>",
+        "userId": "68e4e888715b38034c0f8f1e",
+        "homeId": {
+          "_id": "68eff5fec5abd0c4fb1ee13d",
+          "name": "My Home"
+        },
+        "anomalyAlertId": null,
+        "channels": ["email", "in-app", "bill_reminder"],
+        "message": "Billing Reminder for My Home: Your energy usage for October 2025 was 30.48 kWh, costing 304.8 PHP. Payment is due by November 5, 2025.",
+        "status": "sent",
+        "acknowledged": false,
+        "sent_at": "2025-10-23T01:37:02Z",
+        "created_at": "2025-10-23T01:37:02Z",
+        "due_date": "2025-11-05T23:59:59Z"
+      },
+      {
+        "_id": "<notification_id_2>",
+        "userId": "68e4e888715b38034c0f8f1e",
+        "homeId": {
+          "_id": "68eff5fec5abd0c4fb1ee13d",
+          "name": "My Home"
+        },
+        "anomalyAlertId": null,
+        "channels": ["email", "in-app", "bill_reminder"],
+        "message": "Billing Reminder for My Home: Your energy usage for October 2025 was 60.5 kWh, costing 605 PHP. Payment is due by November 5, 2025.",
+        "status": "sent",
+        "acknowledged": false,
+        "sent_at": "2025-10-23T01:37:02Z",
+        "created_at": "2025-10-23T01:37:02Z",
+        "due_date": "2025-11-05T23:59:59Z"
+      },
+      {
         "_id": "68f0a129c5abd0c4fb1ee206",
         "userId": "68e4e888715b38034c0f8f1e",
-        "homeId": "68eff5fec5abd0c4fb1ee13d",
+        "homeId": {
+          "_id": "68eff5fec5abd0c4fb1ee13d",
+          "name": "My Home"
+        },
         "anomalyAlertId": {
           "_id": "68f0a127c5abd0c4fb1ee204",
           "description": "Energy usage for Fridge exceeded 40 kWh: 90 kWh",
@@ -1007,12 +1066,13 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
         "channels": ["email", "in-app"],
         "message": "Anomaly detected: Energy usage for Fridge exceeded 40 kWh: 90 kWh. Recommended: Check for malfunction or reduce usage",
         "status": "pending",
+        "acknowledged": false,
         "sent_at": null,
         "created_at": "2025-10-22T10:00:02Z",
         "due_date": null
       }
     ],
-    "total": 1,
+    "total": 3,
     "limit": 10,
     "offset": 0
   }
@@ -1023,27 +1083,26 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 #### 2. Mark Notification as Acknowledged
 - **Method**: PATCH
 - **Endpoint**: `/:id/acknowledge`
-- **Description**: Marks a single notification as acknowledged.
+- **Description**: Marks a single notification as acknowledged, updating its `acknowledged` field to `true`.
 - **Parameters**:
-  - `id`: Notification ID (e.g., `68f0a129c5abd0c4fb1ee206`)
+  - `id`: Notification ID (e.g., `<notification_id_1>`)
 - **Response (200 OK)**:
   ```json
   {
-    "_id": "68f0a129c5abd0c4fb1ee206",
+    "_id": "<notification_id_1>",
     "userId": "68e4e888715b38034c0f8f1e",
-    "homeId": "68eff5fec5abd0c4fb1ee13d",
-    "anomalyAlertId": {
-      "_id": "68f0a127c5abd0c4fb1ee204",
-      "description": "Energy usage for Fridge exceeded 40 kWh: 90 kWh",
-      "severity": "high",
-      "alert_type": "high_energy"
+    "homeId": {
+      "_id": "68eff5fec5abd0c4fb1ee13d",
+      "name": "My Home"
     },
-    "channels": ["email", "in-app"],
-    "message": "Anomaly detected: Energy usage for Fridge exceeded 40 kWh: 90 kWh. Recommended: Check for malfunction or reduce usage",
-    "status": "acknowledged",
-    "sent_at": "2025-10-22T10:02:00Z",
-    "created_at": "2025-10-22T10:00:02Z",
-    "due_date": null
+    "anomalyAlertId": null,
+    "channels": ["email", "in-app", "bill_reminder"],
+    "message": "Billing Reminder for My Home: Your energy usage for October 2025 was 30.48 kWh, costing 304.8 PHP. Payment is due by November 5, 2025.",
+    "status": "sent",
+    "acknowledged": true,
+    "sent_at": "2025-10-23T01:37:02Z",
+    "created_at": "2025-10-23T01:37:02Z",
+    "due_date": "2025-11-05T23:59:59Z"
   }
   ```
 - **Error Responses**:
@@ -1053,11 +1112,11 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 #### 3. Bulk Acknowledge Notifications
 - **Method**: PATCH
 - **Endpoint**: `/acknowledge`
-- **Description**: Marks multiple notifications as acknowledged.
+- **Description**: Marks multiple notifications as acknowledged, updating their `acknowledged` field to `true`.
 - **Request Body**:
   ```json
   {
-    "ids": ["68f0a129c5abd0c4fb1ee206", "68f0a12cc5abd0c4fb1ee209"]
+    "ids": ["<notification_id_1>", "<notification_id_2>"]
   }
   ```
 - **Response (200 OK)**:
@@ -1075,7 +1134,7 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 - **Endpoint**: `/:id`
 - **Description**: Deletes a single notification.
 - **Parameters**:
-  - `id`: Notification ID (e.g., `68f0a129c5abd0c4fb1ee206`)
+  - `id`: Notification ID (e.g., `<notification_id_1>`)
 - **Response (200 OK)**:
   ```json
   {
@@ -1093,7 +1152,7 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 - **Request Body**:
   ```json
   {
-    "ids": ["68f0a129c5abd0c4fb1ee206", "68f0a12cc5abd0c4fb1ee209"]
+    "ids": ["<notification_id_1>", "<notification_id_2>"]
   }
   ```
 - **Response (200 OK)**:
@@ -1167,7 +1226,7 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 - `is_randomized`: Boolean (true for simulated data, false for real data)
 
 ### Energy Summary
-- `_id`: ObjectId (e.g., `68f0a126c5abd0c4fb1ee203`)
+- `_id`: ObjectId (e.g., `68f7cc61b4aa22dafe8365b0`)
 - `homeId`: ObjectId (references `Home._id`)
 - `userId`: ObjectId (references `User._id`)
 - `applianceId`: ObjectId or null (references `Appliance._id`)
@@ -1175,10 +1234,10 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 - `period_start`: Date (e.g., `2025-10-01T00:00:00Z`)
 - `period_end`: Date (e.g., `2025-10-31T23:59:59Z`)
 - `period_type`: String (e.g., `daily`, `weekly`, `monthly`)
-- `total_energy`: Number (kWh, non-negative, e.g., 90)
-- `avg_power`: Number (watts, non-negative, e.g., 1166.67)
-- `total_cost`: Number (PHP, non-negative, e.g., 900)
-- `reading_count`: Number (non-negative, e.g., 3)
+- `total_energy`: Number (kWh, non-negative, e.g., 30.48)
+- `avg_power`: Number (watts, non-negative, e.g., 0)
+- `total_cost`: Number (PHP, non-negative, e.g., 304.8)
+- `reading_count`: Number (non-negative, e.g., 1)
 - `active_time_percentage`: Number (0-100, e.g., 100)
 
 ### Anomaly Alert
@@ -1196,16 +1255,17 @@ This documentation details the API endpoints for the Home Energy Monitoring Syst
 - `status`: String (e.g., `active`, `acknowledged`, `resolved`)
 
 ### Notification
-- `_id`: ObjectId (e.g., `68f0a129c5abd0c4fb1ee206`)
+- `_id`: ObjectId (e.g., `<notification_id_1>`)
 - `userId`: ObjectId (references `User._id`)
 - `homeId`: ObjectId or null (references `Home._id`)
 - `anomalyAlertId`: ObjectId or null (references `AnomalyAlert._id`)
-- `channels`: Array of String (e.g., `["email", "in-app"]`, from `NOTIFICATION_TYPES`)
-- `message`: String (e.g., `Anomaly detected: Energy usage for Fridge exceeded 40 kWh: 90 kWh`)
+- `channels`: Array of String (e.g., `["email", "in-app", "bill_reminder"]`, from `NOTIFICATION_TYPES`)
+- `message`: String (e.g., `Billing Reminder for My Home: Your energy usage for October 2025 was 30.48 kWh, costing 304.8 PHP. Payment is due by November 5, 2025.`)
 - `status`: String (e.g., `pending`, `sent`, `failed`, `acknowledged`)
+- `acknowledged`: Boolean (default: `false`, set to `true` when marked as acknowledged)
 - `sent_at`: Date or null
 - `created_at`: Date
-- `due_date`: Date or null (e.g., `2025-11-05T23:59:59Z`)
+- `due_date`: Date or null (e.g., `2025-11-05T23:59:59Z` for billing reminders)
 
 ### OTP
 - `_id`: ObjectId (e.g., `68f0a12bc5abd0c4fb1ee208`)
@@ -1225,7 +1285,7 @@ module.exports = {
   },
   ALERT_TYPES: ["high_energy", "high_cost", "unusual_spike"],
   SEVERITY_LEVELS: ["low", "medium", "high"],
-  NOTIFICATION_TYPES: ["email", "push", "in-app", "bill_reminder"],
+  NOTIFICATION_TYPES: ["email", "in-app", "bill_reminder"],
   PERIOD_TYPES: ["daily", "weekly", "monthly"],
   HIGH_ENERGY_THRESHOLD: 50, // kWh
   HIGH_COST_THRESHOLD: 100, // PHP
@@ -1245,7 +1305,7 @@ module.exports = {
 - **Authentication**: JWT (15-min expiry) and refresh tokens (7-day expiry) stored in MongoDB.
 - **Password Hashing**: bcrypt.
 - **Input Validation**: Ensures valid ObjectIds, ranges, and ownership via middleware (`validate.js`).
-- **Email Notifications**: OTP sent via nodemailer for `email` and `bill_reminder` channels, returns `503` on SMTP failure.
+- **Email Notifications**: Sent via nodemailer for `email` and `bill_reminder` channels, returns `503` on SMTP failure.
 - **Rate Limiting**:
   - `/api/users/login`: 5 attempts/15 min.
   - `/api/users/password/reset/*`: 3 attempts/hour.
@@ -1257,7 +1317,23 @@ module.exports = {
 - **MongoDB Indexes**: Optimized for performance (e.g., `energySummary` on `userId`, `homeId`, `period_type`).
 - **Logs**: Stored in `backend/logs/` for debugging.
 - **ESP32 Integration**: Posts real data for one appliance (e.g., Fridge, `is_randomized: false`) and randomized data for others (e.g., AC, TV, `is_randomized: true`).
-- **Billing Reminders**: Triggered by cron job at month-end, sent if `total_cost > 0` and user has `email` or `bill_reminder` in `notification_preferences`.
+- **Billing Reminders**: Triggered by a cron job on the last day of each month (via `node-cron`, schedule `0 0 * * *` in UTC, checked with `isLastDayOfMonth` from `date-fns`). Notifications are created for `EnergySummary` records with `period_type: "monthly"`, `period_end` within the last day of the month, and `total_cost > 0`. Sent via `email`, `in-app`, or `bill_reminder` channels if enabled in `notification_preferences`. The `due_date` is set to 5 days after the `period_end` (per `BILLING_DUE_DAYS`).
+- **Example Billing Reminder**: For `EnergySummary` with `_id: 68f7cc61b4aa22dafe8365b0`, a notification is created with:
+  ```json
+  {
+    "_id": "<notification_id_1>",
+    "userId": "68e4e888715b38034c0f8f1e",
+    "homeId": "68eff5fec5abd0c4fb1ee13d",
+    "anomalyAlertId": null,
+    "channels": ["email", "in-app", "bill_reminder"],
+    "message": "Billing Reminder for My Home: Your energy usage for October 2025 was 30.48 kWh, costing 304.8 PHP. Payment is due by November 5, 2025.",
+    "status": "sent",
+    "acknowledged": false,
+    "sent_at": "2025-10-23T01:37:02Z",
+    "created_at": "2025-10-23T01:37:02Z",
+    "due_date": "2025-11-05T23:59:59Z"
+  }
+  ```
 
 ## Dependencies
-- **Backend**: express, mongoose, bcryptjs, jsonwebtoken, express-rate-limit, nodemailer, multer, node-cron, cors, helmet, morgan.
+- **Backend**: express, mongoose, bcryptjs, jsonwebtoken, express-rate-limit, nodemailer, multer, node-cron, cors, helmet, morgan, date-fns.
