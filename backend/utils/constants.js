@@ -13,6 +13,7 @@ module.exports = {
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png'],
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   OTP_LENGTH: 6,
+  BILLING_DUE_DAYS: 5,
   OTP_EXPIRY_MINUTES: 10,
   ENERGY_POST_RATE_LIMIT: 100,
   VALID_ENERGY_RANGES: {
