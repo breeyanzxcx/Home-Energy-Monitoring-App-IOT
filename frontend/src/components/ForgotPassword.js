@@ -1,46 +1,93 @@
 import React, { useState } from 'react';
 
 const ForgotPassword = ({ onSwitch }) => {
-  const [step, setStep] = useState('phone'); // 'phone', 'otp', 'success', 'error'
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [step, setStep] = useState('email'); // 'email', 'otp', 'success', 'error'
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handlePhoneSubmit = () => {
-    if (!phoneNumber) {
-      setError('Phone number is required');
+  const handleEmailSubmit = async () => {
+    if (!email) {
+      setError('Email is required');
       return;
     }
-    if (!/^\d{10,}$/.test(phoneNumber.replace(/[\s-]/g, ''))) {
-      setError('Please enter a valid phone number');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
     
     setError('');
-    setStep('otp');
-    console.log('OTP sent to:', phoneNumber);
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/users/password/reset/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send OTP');
+      }
+
+      setStep('otp');
+      console.log('OTP sent to:', email);
+    } catch (err) {
+      setError(err.message || 'Failed to send OTP');
+    }
   };
 
-  const handleOtpSubmit = () => {
+  const handleOtpSubmit = async () => {
     if (!otp) {
       setError('OTP is required');
       return;
     }
+    if (!newPassword) {
+      setError('New password is required');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
     
-    // Simulate OTP verification (replace with actual API call)
-    if (otp === '123456') {
-      setError('');
+    setError('');
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/users/password/reset/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          otp, 
+          newPassword 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password');
+      }
+
       setStep('success');
-      console.log('OTP verified successfully');
-    } else {
+      console.log('Password reset successful');
+    } catch (err) {
+      setError(err.message || 'Failed to reset password');
       setStep('error');
-      setError('');
     }
   };
 
   const handleSendAnother = () => {
     setOtp('');
-    setStep('phone');
+    setNewPassword('');
+    setStep('email');
     setError('');
   };
 
@@ -77,25 +124,25 @@ const ForgotPassword = ({ onSwitch }) => {
         
         <div className="flex-1 p-16 flex items-center justify-center">
           <div className="w-full max-w-sm">
-            {step === 'phone' && (
+            {step === 'email' && (
               <>
                 <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center">
                   Forgot Password?
                 </h2>
                 <p className="text-gray-600 text-center mb-10 text-sm">
-                  Enter your phone number to receive an OTP
+                  Enter your email address to receive an OTP
                 </p>
                 
                 <div className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <div className="relative flex items-center">
-                      <i className="fas fa-phone absolute left-4 text-gray-400 z-10"></i>
+                      <i className="fas fa-envelope absolute left-4 text-gray-400 z-10"></i>
                       <input
-                        type="tel"
-                        placeholder="Phone Number"
-                        value={phoneNumber}
+                        type="email"
+                        placeholder="Email Address"
+                        value={email}
                         onChange={(e) => {
-                          setPhoneNumber(e.target.value);
+                          setEmail(e.target.value);
                           setError('');
                         }}
                         className={`w-full pl-12 pr-4 py-4 border-2 rounded-xl text-base transition-all duration-300 box-border ${
@@ -112,10 +159,10 @@ const ForgotPassword = ({ onSwitch }) => {
                   
                   <button 
                     type="button"
-                    onClick={handlePhoneSubmit}
+                    onClick={handleEmailSubmit}
                     className="bg-gradient-to-r from-blue-500 to-blue-700 text-white border-none py-4 px-8 rounded-xl text-base font-semibold cursor-pointer transition-all duration-300 mt-3 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-300 active:translate-y-0"
                   >
-                    Confirm
+                    Send OTP
                   </button>
                 </div>
               </>
@@ -124,10 +171,10 @@ const ForgotPassword = ({ onSwitch }) => {
             {step === 'otp' && (
               <>
                 <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center">
-                  Enter OTP
+                  Reset Password
                 </h2>
                 <p className="text-gray-600 text-center mb-10 text-sm">
-                  We've sent a code to {phoneNumber}
+                  We've sent a code to {email}
                 </p>
                 
                 <div className="flex flex-col gap-6">
@@ -150,6 +197,26 @@ const ForgotPassword = ({ onSwitch }) => {
                         }`}
                       />
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <div className="relative flex items-center">
+                      <i className="fas fa-lock absolute left-4 text-gray-400 z-10"></i>
+                      <input
+                        type="password"
+                        placeholder="New Password"
+                        value={newPassword}
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          setError('');
+                        }}
+                        className={`w-full pl-12 pr-4 py-4 border-2 rounded-xl text-base transition-all duration-300 box-border ${
+                          error 
+                            ? 'border-red-500 focus:border-red-500' 
+                            : 'border-gray-200 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-100'
+                        }`}
+                      />
+                    </div>
                     {error && (
                       <span className="text-red-500 text-sm mt-1">{error}</span>
                     )}
@@ -160,7 +227,7 @@ const ForgotPassword = ({ onSwitch }) => {
                     onClick={handleOtpSubmit}
                     className="bg-gradient-to-r from-blue-500 to-blue-700 text-white border-none py-4 px-8 rounded-xl text-base font-semibold cursor-pointer transition-all duration-300 mt-3 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-300 active:translate-y-0"
                   >
-                    Confirm
+                    Reset Password
                   </button>
                 </div>
               </>

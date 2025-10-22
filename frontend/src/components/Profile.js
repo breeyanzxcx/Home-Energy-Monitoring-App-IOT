@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Sidebar icon wrapper
 const LeftIcon = ({ children, onClick }) => (
@@ -29,20 +29,59 @@ const ProfileField = ({ label, value, placeholder, icon }) => (
 const Profile = ({ onSwitch }) => {
   const [userImage, setUserImage] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const user = {
-    name: 'first name last name',
-    username: 'user name',
-    email: 'user@gmail.com',
-    phone: 'Country Code: +63 012345',
-    firstName: 'Not set',
-    lastName: 'Not set',
-  };
-  const activity = {
-    locations: 10,
-    appliances: 50,
+  const [user, setUser] = useState({
+    name: '',
+    username: '',
+    email: '',
+    profilePicture: null
+  });
+
+  const [activity, setActivity] = useState({
+    locations: 0,
+    appliances: 0,
     logs: '--',
-    anomalies: '--',
-  };
+    anomalies: '--'
+  });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    // Fetch profile
+    fetch('http://localhost:5000/api/users/profile', { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch profile');
+        return res.json();
+      })
+      .then((profile) => {
+        setUser((u) => ({
+          ...u,
+          name: profile.name || '',
+          username: profile.name || '',
+          email: profile.email || '',
+          profilePicture: profile.profilePicture || null
+        }));
+      })
+      .catch(() => {
+        // ignore for now
+      });
+
+    // Fetch homes (locations count)
+    fetch('http://localhost:5000/api/homes', { headers })
+      .then((res) => res.ok ? res.json() : [])
+      .then((homes) => setActivity((a) => ({ ...a, locations: Array.isArray(homes) ? homes.length : 0 })))
+      .catch(() => {});
+
+    // Fetch appliances (appliances count)
+    fetch('http://localhost:5000/api/appliances', { headers })
+      .then((res) => res.ok ? res.json() : [])
+      .then((appliances) => setActivity((a) => ({ ...a, appliances: Array.isArray(appliances) ? appliances.length : 0 })))
+      .catch(() => {});
+
+    // Optional: could fetch logs/anomalies counts as needed
+  }, []);
 
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
@@ -110,7 +149,7 @@ const Profile = ({ onSwitch }) => {
               className="w-20 h-20 rounded-full mr-4"
             />
             <div>
-              <h2 className="text-xl font-semibold">{user.name} ({user.username})</h2>
+              <h2 className="text-xl font-semibold">{user.name || 'First name last name'} {user.username ? `(${user.username})` : ''}</h2>
             </div>
           </div>
 
@@ -122,13 +161,10 @@ const Profile = ({ onSwitch }) => {
               </div>
               <div className="p-6">
                 <ProfileField label="Email" value={user.email} icon="📧" />
-                <ProfileField label="Phone no. #" value={user.phone} icon="📞" />
                 <div className="grid grid-cols-2 gap-4">
                   <ProfileField label="First name" value={user.firstName} icon="👤" />
-                  <ProfileField label="Last name" value={user.lastName} icon="👥" />
                 </div>
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-600 mb-2">Edit Profile</label>
                   <div className="flex items-center">
                     <input
                       type="file"

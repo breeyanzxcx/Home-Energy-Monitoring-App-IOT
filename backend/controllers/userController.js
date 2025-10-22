@@ -50,7 +50,7 @@ exports.register = async (req, res) => {
     const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     user.refreshToken = refreshToken;
     await user.save();
-S
+
     logger.info(`User registered: ${email}`);
     res.status(201).json({ token, refreshToken, user: { id: user._id, email, name } });
   } catch (err) {
