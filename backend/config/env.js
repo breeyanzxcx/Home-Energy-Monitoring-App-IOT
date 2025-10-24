@@ -11,7 +11,8 @@ const env = {
   UPLOADS_DIR: process.env.UPLOADS_DIR || './uploads/profile-pictures',
   BASE_URL: process.env.BASE_URL || 'http://localhost:5000',
   EMAIL_USER: process.env.EMAIL_USER || 'acephilipgclass18@gmail.com',
-  EMAIL_PASS: process.env.EMAIL_PASS || 'hibivrgiLLnwtVsq'
+  EMAIL_PASS: process.env.EMAIL_PASS || 'hibivrgiLLnwtVsq',
+  ESP32_API_KEY: process.env.ESP32_API_KEY || '5eb68d56eb48954221f4d680c1d40adbec1ab31a4357e2fa39937d98156beb21'
 };
 
 module.exports = env;

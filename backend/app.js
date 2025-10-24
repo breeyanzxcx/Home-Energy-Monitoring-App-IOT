@@ -10,6 +10,10 @@ const applianceRoutes = require('./routes/applianceRoutes');
 const energyRoutes = require('./routes/energyRoutes');
 const anomalyRoutes = require('./routes/anomalyRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+
+// --- Import your new route file ---
+const ingestRoutes = require('./routes/ingestRoutes');
+
 const app = express();
 
 // Middleware
@@ -30,7 +34,12 @@ app.use('/api/energy', energyRoutes);
 app.use('/api/anomalies', anomalyRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+// --- Add your new ingest route here ---
+app.use('/api/ingest', ingestRoutes);
+
 // Error handler
 app.use(errorHandler);
 
 module.exports = app;
+
+
