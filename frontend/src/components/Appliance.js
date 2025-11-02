@@ -1,12 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
 
-const LeftIcon = ({ children, onClick }) => (
+// Import SVGs as URLs (CRA-compatible)
+import dashboardIcon from '../assets/icons/dashboard.svg';
+import applianceIcon from '../assets/icons/add.svg'; 
+import profileIcon from '../assets/icons/profile.svg';
+import logoutIcon from '../assets/icons/logout.svg';
+
+// Reusable LeftIcon with SVG <img>
+const LeftIcon = ({ onClick, src, label }) => (
   <div
     onClick={onClick}
-    className="w-12 h-12 flex items-center justify-center rounded-md mb-3 bg-black bg-opacity-40 text-white cursor-pointer hover:bg-opacity-60"
+    className="w-12 h-12 flex items-center justify-center rounded-md mb-3 
+               bg-blue-500 bg-opacity-100 text-white cursor-pointer 
+               hover:bg-blue-500 hover:bg-opacity-70 hover:text-yellow-300 
+               transition-all duration-200"
+    title={label}
   >
-    {children}
+    <img src={src} alt={label} className="w-6 h-6" />
+  </div>
+);
+
+// Add this RIGHT AFTER the LeftIcon component
+const NavItem = ({ onClick, src, label }) => (
+  <div
+    onClick={onClick}
+    className="w-12 h-12 flex items-center justify-center rounded-md mb-3 
+               bg-blue-500 bg-opacity-100 text-white cursor-pointer 
+               hover:bg-blue-500 hover:bg-opacity-70 hover:text-yellow-300 
+               transition-all duration-200"
+    title={label}
+  >
+    <img src={src} alt={label} className="w-6 h-6" />
   </div>
 );
 
@@ -19,7 +43,7 @@ const ApplianceCard = ({ name, image, onDelete }) => (
       }}
       className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
     >
-      ✕
+      X
     </button>
     <img src={image} alt={name} className="w-16 h-16 object-contain mb-2" />
     <div className="text-sm text-gray-600">{name}</div>
@@ -184,7 +208,6 @@ const Appliance = ({ onSwitch }) => {
     const sameNameCount = existingAppliances.filter((a) => a.name.startsWith(baseApplianceName)).length;
     const finalName = sameNameCount > 0 ? `${baseApplianceName} ${sameNameCount + 1}` : baseApplianceName;
 
-    // Calculate energy based on entry type
     let calculatedEnergy;
     if (entryType === 'manual') {
       calculatedEnergy = energy ? Number(energy) : undefined;
@@ -337,16 +360,39 @@ const Appliance = ({ onSwitch }) => {
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1482192505345-5655af888cc4?auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center" />
       <div className="absolute inset-0 bg-black opacity-60 backdrop-blur-sm" />
 
-      <aside className="absolute left-6 top-1/3 transform -translate-y-1/3 z-20">
-        <div className="flex flex-col items-center">
-          <div className="bg-white bg-opacity-6 p-3 rounded-lg shadow-lg flex flex-col items-center">
-            <LeftIcon onClick={() => onSwitch('dashboard')}>🏠</LeftIcon>
-            <LeftIcon onClick={() => onSwitch('appliance')}>⚙️</LeftIcon>
-            <LeftIcon onClick={() => onSwitch('profile')}>👤</LeftIcon>
-            <LeftIcon onClick={() => setShowLogoutConfirm(true)}>🚪</LeftIcon>
-          </div>
-        </div>
-      </aside>
+        {/* Sidebar */}
+   {/* SMOOTH Animated Sidebar - No Jerking */}
+   <aside className="fixed left-0 top-0 h-full z-30 flex items-center">
+     {/* Full-width invisible hover zone */}
+     <div className="relative h-64 w-32 flex items-center group cursor-pointer">
+       
+       {/* Arrow - Always visible when collapsed */}
+       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 rounded-r-full flex items-center justify-center shadow-lg transition-all duration-300 z-10
+                       group-hover:opacity-0 group-hover:-translate-x-8">
+         <svg
+           className="w-5 h-5 text-white transition-transform group-hover:scale-110"
+           fill="none"
+           stroke="currentColor"
+           viewBox="0 0 24 24"
+         >
+           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+         </svg>
+       </div>
+   
+       {/* Panel - Slides in from left */}
+       <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 opacity-0 invisible 
+                       group-hover:translate-x-8 group-hover:opacity-100 group-hover:visible 
+                       transition-all duration-300 ease-out pointer-events-auto">
+         <div className="bg-white p-3 rounded-lg shadow-lg flex flex-col items-center backdrop-blur-sm">
+           <NavItem onClick={() => onSwitch('dashboard')} src={dashboardIcon} label="Dashboard" />
+           <NavItem onClick={() => onSwitch('appliance')} src={applianceIcon} label="Appliances" />
+           <NavItem onClick={() => onSwitch('profile')} src={profileIcon} label="Profile" />
+           <NavItem onClick={() => setShowLogoutConfirm(true)} src={logoutIcon} label="Logout" />
+         </div>
+       </div>
+   
+     </div>
+   </aside>
 
       {errorMessage && (
         <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50">
@@ -357,6 +403,7 @@ const Appliance = ({ onSwitch }) => {
         </div>
       )}
 
+      {/* Modals and UI below remain unchanged */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
@@ -603,13 +650,13 @@ const Appliance = ({ onSwitch }) => {
                         }}
                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        ✕
+                        X
                       </button>
                       <div
                         onClick={() => handleSelectHome(index)}
                         className="w-full cursor-pointer"
                       >
-                        <div className="w-16 h-16 flex items-center justify-center mb-2 text-xl mx-auto">🏠</div>
+                        <div className="w-16 h-16 flex items-center justify-center mb-2 text-xl mx-auto">House</div>
                         <div className="text-sm text-gray-600 text-center">{home.name}</div>
                         <div className="text-xs text-gray-400 mt-2 text-center">{(home.appliances || []).length} appliances</div>
                       </div>

@@ -11,20 +11,18 @@ const fs = require('fs').promises;
 const path = require('path');
 const { OTP_EXPIRY_MINUTES } = require('../utils/constants');
 const { generateOTP } = require('../utils/otp');
+const sharp = require('sharp');
 
 exports.register = async (req, res) => {
   try {
     logger.info('Starting registration process');
-
     const { email, password, name } = req.body;
     logger.info(`Checking email: ${email}`);
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       logger.error('Email already exists:', email);
       return res.status(400).json({ error: 'Email already exists' });
     }
-
     logger.info('Hashing password');
     if (typeof password !== 'string') {
       logger.error('Invalid password type:', typeof password);
@@ -35,12 +33,10 @@ exports.register = async (req, res) => {
     const user = new User({ email, password: hashedPassword });
     await user.save();
     logger.info('User saved:', email);
-
     logger.info('Creating profile');
     const profile = new Profile({ userId: user._id, name });
     await profile.save();
     logger.info('Profile saved for user:', email);
-
     logger.info('Generating JWT and refresh token');
     if (!JWT_SECRET || !REFRESH_TOKEN_SECRET) {
       logger.error('JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
@@ -50,7 +46,6 @@ exports.register = async (req, res) => {
     const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     user.refreshToken = refreshToken;
     await user.save();
-
     logger.info(`User registered: ${email}`);
     res.status(201).json({ token, refreshToken, user: { id: user._id, email, name } });
   } catch (err) {
@@ -62,23 +57,19 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     logger.info('Starting login process');
-
     const { email, password } = req.body;
     logger.info(`Checking email: ${email}`);
-
     const user = await User.findOne({ email });
     if (!user) {
       logger.error('Invalid credentials for email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
     logger.info('Comparing password');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       logger.error('Invalid credentials for password');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-
     logger.info('Fetching or creating profile');
     let profile = await Profile.findOne({ userId: user._id });
     if (!profile) {
@@ -91,7 +82,6 @@ exports.login = async (req, res) => {
       await profile.save();
       logger.info('Default profile created for user:', user._id);
     }
-
     logger.info('Generating JWT and refresh token');
     if (!JWT_SECRET || !REFRESH_TOKEN_SECRET) {
       logger.error('JWT_SECRET or REFRESH_TOKEN_SECRET is not defined');
@@ -100,7 +90,6 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
     await User.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
-
     logger.info(`User logged in: ${email}`);
     res.status(200).json({ token, refreshToken, user: { id: user._id, email, name: profile.name } });
   } catch (err) {
@@ -117,7 +106,6 @@ exports.refreshToken = async (req, res) => {
       logger.error('No refresh token provided');
       return res.status(400).json({ error: 'Refresh token required' });
     }
-
     let decoded;
     try {
       decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
@@ -125,13 +113,11 @@ exports.refreshToken = async (req, res) => {
       logger.error('Invalid refresh token');
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
-
     const user = await User.findById(decoded.userId);
     if (!user || user.refreshToken !== refreshToken) {
       logger.error('Invalid refresh token for user:', decoded.userId);
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
-
     const newToken = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '15m' });
     logger.info(`Token refreshed for user: ${user._id}`);
     res.status(200).json({ token: newToken, refreshToken });
@@ -157,17 +143,17 @@ exports.getProfile = async (req, res) => {
   try {
     logger.info(`Fetching profile for user: ${req.user._id}`);
     const profile = await Profile.findOne({ userId: req.user._id }).select('-__v');
+    const user = await User.findById(req.user._id).select('email -_id');
     if (!profile) {
       logger.error('Profile not found for user:', req.user._id);
       return res.status(404).json({ error: 'Profile not found' });
     }
-
+    let profileResponse = { ...profile.toObject(), email: user.email };
     if (profile.profilePicture) {
-      profile.profilePicture = `${BASE_URL}/uploads/profile-pictures/${profile.profilePicture}`;
+      profileResponse.profilePicture = `${BASE_URL}/uploads/profile-pictures/${profile.profilePicture}`;
     }
-
     logger.info(`Profile fetched for user: ${req.user._id}`);
-    res.status(200).json(profile);
+    res.status(200).json(profileResponse);
   } catch (err) {
     logger.error('Get profile error:', err.stack || err);
     res.status(500).json({ error: 'Server error', details: err.message || 'Unknown error' });
@@ -178,28 +164,25 @@ exports.updateProfile = async (req, res) => {
   try {
     logger.info(`Updating profile for user: ${req.user._id}`);
     const { name, notification_preferences } = req.body;
-
     const updateData = {};
     if (name) updateData.name = name;
     if (notification_preferences) updateData.notification_preferences = notification_preferences;
-
     const profile = await Profile.findOneAndUpdate(
       { userId: req.user._id },
       { $set: updateData },
       { new: true, runValidators: true }
     ).select('-__v');
-
     if (!profile) {
       logger.error('Profile not found for user:', req.user._id);
       return res.status(404).json({ error: 'Profile not found' });
     }
-
+    const user = await User.findById(req.user._id).select('email -_id');
+    let profileResponse = { ...profile.toObject(), email: user.email };
     if (profile.profilePicture) {
-      profile.profilePicture = `${BASE_URL}/uploads/profile-pictures/${profile.profilePicture}`;
+      profileResponse.profilePicture = `${BASE_URL}/uploads/profile-pictures/${profile.profilePicture}`;
     }
-
     logger.info(`Profile updated for user: ${req.user._id}`);
-    res.status(200).json(profile);
+    res.status(200).json(profileResponse);
   } catch (err) {
     logger.error('Update profile error:', err.stack || err);
     res.status(500).json({ error: 'Server error', details: err.message || 'Unknown error' });
@@ -210,18 +193,15 @@ exports.updateUser = async (req, res) => {
   try {
     logger.info(`Updating user: ${req.user._id}`);
     const { email, password } = req.body;
-
     if (!email && !password) {
       logger.error('No fields provided for user update');
       return res.status(400).json({ error: 'At least one field (email or password) is required' });
     }
-
     const user = await User.findById(req.user._id);
     if (!user) {
       logger.error('User not found:', req.user._id);
       return res.status(404).json({ error: 'User not found' });
     }
-
     if (email) {
       const existingUser = await User.findOne({ email, _id: { $ne: req.user._id } });
       if (existingUser) {
@@ -230,7 +210,6 @@ exports.updateUser = async (req, res) => {
       }
       user.email = email;
     }
-
     if (password) {
       if (typeof password !== 'string') {
         logger.error('Invalid password type:', typeof password);
@@ -238,7 +217,6 @@ exports.updateUser = async (req, res) => {
       }
       user.password = await bcrypt.hash(password, 10);
     }
-
     await user.save();
     logger.info(`User updated: ${user.email}`);
     res.status(200).json({ id: user._id, email: user.email });
@@ -256,7 +234,6 @@ exports.deleteUser = async (req, res) => {
       logger.error('User not found:', req.user._id);
       return res.status(404).json({ error: 'User not found' });
     }
-
     await User.findByIdAndDelete(req.user._id);
     await Profile.findOneAndDelete({ userId: req.user._id });
     logger.info(`User deleted: ${user.email}`);
@@ -275,7 +252,6 @@ exports.deleteProfile = async (req, res) => {
       logger.error('Profile not found for user:', req.user._id);
       return res.status(404).json({ error: 'Profile not found' });
     }
-
     if (profile.profilePicture) {
       const filePath = path.join(UPLOADS_DIR, profile.profilePicture);
       try {
@@ -287,7 +263,6 @@ exports.deleteProfile = async (req, res) => {
         }
       }
     }
-
     await Profile.findOneAndDelete({ userId: req.user._id });
     logger.info(`Profile deleted for user: ${req.user._id}`);
     res.status(204).send();
@@ -304,16 +279,41 @@ exports.uploadProfilePicture = async (req, res) => {
       logger.error('No file uploaded');
       return res.status(400).json({ error: 'No file uploaded' });
     }
-
+    const tempPath = req.file.path;
+    // Validate and detect format
+    let metadata;
+    try {
+      metadata = await sharp(tempPath).metadata();
+    } catch (validationErr) {
+      await fs.unlink(tempPath);
+      logger.error('Invalid image content:', validationErr);
+      return res.status(400).json({ error: 'Invalid image file - must be a valid JPG, PNG, or supported format' });
+    }
+    // Map detected format to extension
+    const formatToExt = {
+      jpeg: '.jpg',
+      png: '.png',
+      gif: '.gif',
+      webp: '.webp',
+      // Add more if needed
+    };
+    const ext = formatToExt[metadata.format];
+    if (!ext) {
+      await fs.unlink(tempPath);
+      return res.status(400).json({ error: 'Unsupported image format' });
+    }
+    // Rename file with correct extension
+    const filename = `${req.user._id}-${Date.now()}${ext}`;
+    const newPath = path.join(path.dirname(tempPath), filename);
+    await fs.rename(tempPath, newPath);
     const profile = await Profile.findOne({ userId: req.user._id });
     if (!profile) {
       logger.error('Profile not found for user:', req.user._id);
-      await fs.unlink(req.file.path);
+      await fs.unlink(newPath);
       return res.status(404).json({ error: 'Profile not found' });
     }
-
     if (profile.profilePicture) {
-      const oldFilePath = path.join(UPLOADS_DIR, profile.profilePicture);
+      const oldFilePath = path.join(UPLOADS_DIR, 'profile-pictures', profile.profilePicture);
       try {
         await fs.unlink(oldFilePath);
         logger.info(`Deleted old profile picture: ${oldFilePath}`);
@@ -323,11 +323,9 @@ exports.uploadProfilePicture = async (req, res) => {
         }
       }
     }
-
-    profile.profilePicture = req.file.filename;
+    profile.profilePicture = filename;
     await profile.save();
-
-    const profilePictureUrl = `${BASE_URL}/uploads/profile-pictures/${req.file.filename}`;
+    const profilePictureUrl = `${BASE_URL}/uploads/profile-pictures/${filename}`;
     logger.info(`Profile picture uploaded for user: ${req.user._id}`);
     res.status(200).json({
       ...profile.toObject(),
@@ -355,12 +353,10 @@ exports.deleteProfilePicture = async (req, res) => {
       logger.error('Profile not found for user:', req.user._id);
       return res.status(404).json({ error: 'Profile not found' });
     }
-
     if (!profile.profilePicture) {
       logger.info('No profile picture to delete');
       return res.status(400).json({ error: 'No profile picture to delete' });
     }
-
     const filePath = path.join(UPLOADS_DIR, profile.profilePicture);
     try {
       await fs.unlink(filePath);
@@ -371,10 +367,8 @@ exports.deleteProfilePicture = async (req, res) => {
         return res.status(500).json({ error: 'Failed to delete profile picture', details: err.message });
       }
     }
-
     profile.profilePicture = null;
     await profile.save();
-
     logger.info(`Profile picture deleted for user: ${req.user._id}`);
     res.status(200).json(profile);
   } catch (err) {
@@ -387,16 +381,13 @@ exports.requestPasswordReset = async (req, res) => {
   try {
     logger.info(`Requesting password reset for email: ${req.body.email}`);
     const { email } = req.body;
-
     const user = await User.findOne({ email });
     if (!user) {
       logger.error('User not found for email:', email);
       return res.status(404).json({ error: 'User not found' });
     }
-
     const otp = generateOTP();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
     const notification = new Notification({
       userId: user._id,
       homeId: null,
@@ -405,7 +396,6 @@ exports.requestPasswordReset = async (req, res) => {
       status: 'pending'
     });
     await notification.save();
-
     const otpRecord = new Otp({
       userId: user._id,
       notificationId: notification._id,
@@ -413,7 +403,6 @@ exports.requestPasswordReset = async (req, res) => {
       expires_at: expiresAt
     });
     await otpRecord.save();
-
     try {
       await sendEmail({
         to: email,
@@ -424,12 +413,10 @@ exports.requestPasswordReset = async (req, res) => {
       await Notification.findByIdAndUpdate(notification._id, { status: 'failed' });
       throw emailErr;
     }
-
     await Notification.findByIdAndUpdate(notification._id, {
       status: 'sent',
       sent_at: new Date()
     });
-
     logger.info(`Password reset OTP sent for user: ${user._id}`);
     res.status(200).json({ message: 'OTP sent to your email' });
   } catch (err) {
@@ -445,40 +432,33 @@ exports.verifyPasswordReset = async (req, res) => {
   try {
     logger.info(`Verifying password reset for email: ${req.body.email}`);
     const { email, otp, newPassword } = req.body;
-
     const user = await User.findOne({ email });
     if (!user) {
       logger.error('User not found for email:', email);
       return res.status(404).json({ error: 'User not found' });
     }
-
     const otpRecord = await Otp.findOne({ userId: user._id, otp });
     if (!otpRecord) {
       logger.error('Invalid OTP for user:', user._id);
       return res.status(400).json({ error: 'Invalid OTP' });
     }
-
     if (new Date() > otpRecord.expires_at) {
       logger.error('Expired OTP for user:', user._id);
       await Otp.deleteOne({ _id: otpRecord._id });
       await Notification.findByIdAndUpdate(otpRecord.notificationId, { status: 'failed' });
       return res.status(400).json({ error: 'OTP has expired' });
     }
-
     if (typeof newPassword !== 'string') {
       logger.error('Invalid new password type:', typeof newPassword);
       return res.status(400).json({ error: 'New password must be a string' });
     }
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
-
     await Notification.findByIdAndUpdate(otpRecord.notificationId, {
       status: 'sent',
       sent_at: new Date()
     });
-
     await Otp.deleteOne({ _id: otpRecord._id });
-
     logger.info(`Password reset successful for user: ${user._id}`);
     res.status(200).json({ message: 'Password reset successful' });
   } catch (err) {

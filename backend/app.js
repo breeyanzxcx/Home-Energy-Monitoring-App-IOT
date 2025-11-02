@@ -18,12 +18,14 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'same-site' }
+}));
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 app.use(express.json());
 
 // Serve static files for profile pictures
-app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'Uploads/profile-pictures')));
+app.use('/uploads/profile-pictures', express.static(path.join(__dirname, 'uploads/profile-pictures')));
 
 // Routes
 app.use('/api/users', require('./routes/userRoutes'));
@@ -41,5 +43,3 @@ app.use('/api/ingest', ingestRoutes);
 app.use(errorHandler);
 
 module.exports = app;
-
-
