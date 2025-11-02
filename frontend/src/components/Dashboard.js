@@ -184,22 +184,19 @@ const AnomalyList = ({ homeId }) => {
       bg: "bg-red-50",
       border: "border-red-200",
       text: "text-red-800",
-      badge: "bg-red-500",
-      icon: "🔴"
+      badge: "bg-red-100 text-red-800 border-red-200"
     },
     medium: {
       bg: "bg-orange-50",
       border: "border-orange-200", 
       text: "text-orange-800",
-      badge: "bg-orange-500",
-      icon: "🟠"
+      badge: "bg-orange-100 text-orange-800 border-orange-200"
     },
     low: {
       bg: "bg-yellow-50",
       border: "border-yellow-200",
       text: "text-yellow-800",
-      badge: "bg-yellow-500",
-      icon: "🟡"
+      badge: "bg-yellow-100 text-yellow-800 border-yellow-200"
     }
   };
 
@@ -275,52 +272,46 @@ const AnomalyList = ({ homeId }) => {
                 setShowDetailsModal(true);
               }}
             >
-              {/* Header */}
+              {/* Header - Appliance name left, status badges right */}
               <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{severity.icon}</span>
-                  <div>
-                    <div className="font-semibold text-gray-900 text-sm">{appliance}</div>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${severity.badge} text-white`}>
-                        {alert.severity}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded-full border ${status.badge}`}>
-                        {status.text}
-                      </span>
-                    </div>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-gray-900 text-sm truncate text-left">{appliance}</div>
                 </div>
-                <div className="text-xs text-gray-500 font-medium">
-                  {getTimeAgo(alert.detected_at)}
+                <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${severity.badge}`}>
+                    {alert.severity}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full border ${status.badge}`}>
+                    {status.text}
+                  </span>
                 </div>
               </div>
 
-              {/* Content - Only show description, no recommendation */}
+              {/* Content - Left Aligned */}
               <div className="space-y-2">
-                <div className={`text-sm font-medium ${severity.text}`}>
+                <div className={`text-sm font-medium ${severity.text} text-left leading-relaxed`}>
                   {alert.description}
                 </div>
               </div>
 
-              {/* Footer */}
+              {/* Footer - Left Aligned */}
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
                 <div className="flex items-center space-x-1 text-xs text-gray-600">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                   </svg>
-                  <span>{room}</span>
+                  <span className="truncate">{room}</span>
                 </div>
                 
-                {/* Quick Actions */}
-                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Quick Actions - Right Aligned */}
+                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       confirmResolveAnomaly(alert._id, appliance);
                     }}
                     disabled={actionLoading === alert._id}
-                    className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex-shrink-0"
                   >
                     {actionLoading === alert._id ? '...' : 'Resolve'}
                   </button>
@@ -330,7 +321,7 @@ const AnomalyList = ({ homeId }) => {
                       confirmDeleteAnomaly(alert._id, appliance);
                     }}
                     disabled={actionLoading === alert._id}
-                    className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                    className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0"
                   >
                     {actionLoading === alert._id ? '...' : 'Delete'}
                   </button>
@@ -347,23 +338,20 @@ const AnomalyList = ({ homeId }) => {
           <div className="bg-white rounded-xl max-w-2xl w-full mx-auto shadow-2xl transform transition-all" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-start">
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{(severityConfig[selectedAnomaly.severity] || severityConfig.low).icon}</span>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">Anomaly Details</h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase ${(severityConfig[selectedAnomaly.severity] || severityConfig.low).badge} text-white`}>
-                      {selectedAnomaly.severity}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded-full border ${(statusConfig[selectedAnomaly.status] || statusConfig.active).badge}`}>
-                      {(statusConfig[selectedAnomaly.status] || statusConfig.active).text}
-                    </span>
-                  </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg text-left">Anomaly Details</h3>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${(severityConfig[selectedAnomaly.severity] || severityConfig.low).badge}`}>
+                    {selectedAnomaly.severity}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full border ${(statusConfig[selectedAnomaly.status] || statusConfig.active).badge}`}>
+                    {(statusConfig[selectedAnomaly.status] || statusConfig.active).text}
+                  </span>
                 </div>
               </div>
               <button 
                 onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100 flex-shrink-0"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -377,33 +365,33 @@ const AnomalyList = ({ homeId }) => {
                 {/* Anomaly Information */}
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2">Appliance Information</h4>
+                    <h4 className="font-semibold text-gray-900 text-sm mb-2 text-left">Appliance Information</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Appliance:</span>
-                        <span className="font-medium">{selectedAnomaly.applianceId?.name || "Unknown"}</span>
+                        <span className="font-medium text-right">{selectedAnomaly.applianceId?.name || "Unknown"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Room:</span>
-                        <span className="font-medium">{selectedAnomaly.roomId?.name || "Unknown"}</span>
+                        <span className="font-medium text-right">{selectedAnomaly.roomId?.name || "Unknown"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Alert Type:</span>
-                        <span className="font-medium capitalize">{selectedAnomaly.alert_type?.replace(/_/g, ' ')}</span>
+                        <span className="font-medium text-right capitalize">{selectedAnomaly.alert_type?.replace(/_/g, ' ')}</span>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2">Detection Details</h4>
+                    <h4 className="font-semibold text-gray-900 text-sm mb-2 text-left">Detection Details</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Detected:</span>
-                        <span className="font-medium">{new Date(selectedAnomaly.detected_at).toLocaleString()}</span>
+                        <span className="font-medium text-right">{new Date(selectedAnomaly.detected_at).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Time Ago:</span>
-                        <span className="font-medium">{getTimeAgo(selectedAnomaly.detected_at)}</span>
+                        <span className="font-medium text-right">{getTimeAgo(selectedAnomaly.detected_at)}</span>
                       </div>
                     </div>
                   </div>
@@ -411,27 +399,17 @@ const AnomalyList = ({ homeId }) => {
 
                 {/* Alert Details */}
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-900 text-sm mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                      </svg>
-                      Anomaly Description
-                    </h4>
-                    <p className="text-gray-700 text-sm leading-relaxed">
+                  <div className="bg-gray-50 p-4 rounded-lg border text-left">
+                    <h4 className="font-semibold text-gray-900 text-sm mb-2">Anomaly Description</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed text-left">
                       {selectedAnomaly.description}
                     </p>
                   </div>
 
                   {selectedAnomaly.recommended_action && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h4 className="font-semibold text-blue-800 text-sm mb-2 flex items-center gap-2">
-                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                        </svg>
-                        Recommended Action
-                      </h4>
-                      <p className="text-blue-700 text-sm leading-relaxed">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-left">
+                      <h4 className="font-semibold text-blue-800 text-sm mb-2">Recommended Action</h4>
+                      <p className="text-blue-700 text-sm leading-relaxed text-left">
                         {selectedAnomaly.recommended_action}
                       </p>
                     </div>
@@ -443,7 +421,7 @@ const AnomalyList = ({ homeId }) => {
             {/* Actions */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
               <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 text-left">
                   ID: {selectedAnomaly._id}
                 </div>
                 <div className="flex space-x-3">
@@ -480,12 +458,12 @@ const AnomalyList = ({ homeId }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 text-left">
                   {pendingAction.type === 'resolve' ? 'Mark as Resolved?' : 'Delete Anomaly?'}
                 </h3>
               </div>
               
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-6 text-left">
                 {pendingAction.type === 'resolve' 
                   ? `Are you sure you want to mark the anomaly for "${pendingAction.name}" as resolved? This will remove it from the active alerts list.`
                   : `Are you sure you want to permanently delete the anomaly alert for "${pendingAction.name}"? This action cannot be undone.`
@@ -933,7 +911,7 @@ const NotificationsUI = ({ homeId }) => {
 const Dashboard = ({ onSwitch }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const bgUrl =
-    "https://images.unsplash.com/photo-1482192505345-5655af888cc4?auto=format&fit=crop&w=2000&q=80"
+    "https://images.unsplash.com/photo-1501183638710-841dd1904471?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170"
   // ---------- Global states ----------
   const [loading, setLoading] = useState(true);
   const [homes, setHomes] = useState([]);

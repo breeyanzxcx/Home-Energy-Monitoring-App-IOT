@@ -13,6 +13,7 @@ import kitchenIcon from '../assets/icons/kitchen.svg';
 import lightIcon from '../assets/icons/light.svg';
 import speakerIcon from '../assets/icons/speaker.svg';
 import televisionIcon from '../assets/icons/television.svg';
+import filterIcon from '../assets/icons/filter.svg';
 
 // NavItem Component
 const NavItem = ({ onClick, src, label }) => (
@@ -141,6 +142,10 @@ const Appliance = ({ onSwitch }) => {
   const [applianceToEdit, setApplianceToEdit] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [rooms, setRooms] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [filterRoom, setFilterRoom] = useState('all');
+  const [filterEnergy, setFilterEnergy] = useState('all');
 
   // Updated default appliances with proper icons
   const defaultAppliances = [
@@ -202,6 +207,7 @@ const Appliance = ({ onSwitch }) => {
             type: a.type,
             energy_threshold: a.energy_threshold,
             roomId: a.roomId,
+            roomName: a.roomId?.name || 'Unknown Room',
             image: defaultAppliances.find((da) => da.name === a.type)?.image || houseIcon,
           })),
         };
@@ -276,8 +282,51 @@ const Appliance = ({ onSwitch }) => {
     fetchRooms();
   }, [selectedHomeIndex, homes]);
 
+  // Filter appliances based on selected filters
+  const getFilteredAppliances = () => {
+    if (selectedHomeIndex === null || !homes[selectedHomeIndex]) return [];
+    
+    const appliances = homes[selectedHomeIndex].appliances || [];
+    
+    return appliances.filter(appliance => {
+      // Filter by type
+      if (filterType !== 'all' && appliance.type !== filterType) {
+        return false;
+      }
+      
+      // Filter by room
+      if (filterRoom !== 'all' && appliance.roomId !== filterRoom) {
+        return false;
+      }
+      
+      // Filter by energy consumption
+      if (filterEnergy !== 'all') {
+        const energyValue = appliance.energy_threshold || 0;
+        switch (filterEnergy) {
+          case 'low':
+            if (energyValue > 1) return false;
+            break;
+          case 'medium':
+            if (energyValue <= 1 || energyValue > 3) return false;
+            break;
+          case 'high':
+            if (energyValue <= 3) return false;
+            break;
+          default:
+            break;
+        }
+      }
+      
+      return true;
+    });
+  };
+
   const handleSelectHome = (index) => {
     setSelectedHomeIndex(index);
+    // Reset filters when switching homes
+    setFilterType('all');
+    setFilterRoom('all');
+    setFilterEnergy('all');
   };
 
   const handleBackToHomes = () => {
@@ -342,6 +391,8 @@ const Appliance = ({ onSwitch }) => {
               name: data.name,
               type: data.type,
               energy_threshold: data.energy_threshold,
+              roomId: data.roomId,
+              roomName: rooms.find(r => (r._id || r.id) === data.roomId)?.name || 'Unknown Room',
               image: baseAppliance ? baseAppliance.image : houseIcon,
             },
           ],
@@ -394,6 +445,7 @@ const Appliance = ({ onSwitch }) => {
             type: data.type,
             energy_threshold: data.energy_threshold,
             roomId: data.roomId,
+            roomName: rooms.find(r => (r._id || r.id) === data.roomId)?.name || 'Unknown Room',
           };
         }
         return copy;
@@ -520,9 +572,19 @@ const Appliance = ({ onSwitch }) => {
     setErrorMessage('');
   };
 
+  // Reset filters
+  const resetFilters = () => {
+    setFilterType('all');
+    setFilterRoom('all');
+    setFilterEnergy('all');
+  };
+
+  const filteredAppliances = getFilteredAppliances();
+  const hasActiveFilters = filterType !== 'all' || filterRoom !== 'all' || filterEnergy !== 'all';
+
   return (
     <div className="h-screen w-screen overflow-hidden relative font-sans bg-gray-50">
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1482192505345-5655af888cc4?auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center" />
+      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1501183638710-841dd1904471?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170')] bg-cover bg-center" />
       <div className="absolute inset-0 bg-black opacity-60 backdrop-blur-sm" />
 
       {/* Sidebar */}
@@ -588,6 +650,134 @@ const Appliance = ({ onSwitch }) => {
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full relative">
+            <button
+              onClick={() => setShowFilterModal(false)}
+              className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">Filter Appliances</h3>
+
+            <div className="space-y-6">
+              {/* Filter by Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Appliance Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setFilterType('all')}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      filterType === 'all' 
+                        ? 'bg-blue-500 text-white border-blue-500' 
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    All Types
+                  </button>
+                  {defaultAppliances.map((appliance) => (
+                    <button
+                      key={appliance.id}
+                      onClick={() => setFilterType(appliance.name)}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                        filterType === appliance.name 
+                          ? 'bg-blue-500 text-white border-blue-500' 
+                          : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      {appliance.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filter by Room */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Room</label>
+                <select
+                  value={filterRoom}
+                  onChange={(e) => setFilterRoom(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="all">All Rooms</option>
+                  {rooms.map((room) => (
+                    <option key={room._id || room.id} value={room._id || room.id}>
+                      {room.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter by Energy Consumption */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Energy Consumption</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setFilterEnergy('all')}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      filterEnergy === 'all' 
+                        ? 'bg-blue-500 text-white border-blue-500' 
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    All Energy
+                  </button>
+                  <button
+                    onClick={() => setFilterEnergy('low')}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      filterEnergy === 'low' 
+                        ? 'bg-green-500 text-white border-green-500' 
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-green-300'
+                    }`}
+                  >
+                    Low (&lt;1 kWh)
+                  </button>
+                  <button
+                    onClick={() => setFilterEnergy('medium')}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      filterEnergy === 'medium' 
+                        ? 'bg-yellow-500 text-white border-yellow-500' 
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-yellow-300'
+                    }`}
+                  >
+                    Medium (1-3 kWh)
+                  </button>
+                  <button
+                    onClick={() => setFilterEnergy('high')}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      filterEnergy === 'high' 
+                        ? 'bg-red-500 text-white border-red-500' 
+                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:border-red-300'
+                    }`}
+                  >
+                    High (&gt;3 kWh)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={resetFilters}
+                className="flex-1 p-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+              >
+                Reset Filters
+              </button>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="flex-1 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Apply Filters
               </button>
             </div>
           </div>
@@ -926,15 +1116,7 @@ const Appliance = ({ onSwitch }) => {
               <div className="bg-blue-500/80 text-white px-8 py-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-semibold">Your Homes</h2>
-                  <button
-                    onClick={() => setShowAddHomeModal(true)}
-                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Add Home</span>
-                  </button>
+                  {/* REMOVED the extra Add Home button from here */}
                 </div>
               </div>
               <div className="p-8">
@@ -989,31 +1171,92 @@ const Appliance = ({ onSwitch }) => {
             <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/20">
               <div className="bg-blue-600/80 text-white px-8 py-6">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    <button 
-                      onClick={handleBackToHomes}
-                      className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      <span>Back to Homes</span>
-                    </button>
-                    <h2 className="text-2xl font-semibold">Appliances</h2>
-                  </div>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Add Appliance</span>
-                  </button>
+  <div className="flex items-center space-x-4">
+    <button 
+      onClick={handleBackToHomes}
+      className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+    >
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      </svg>
+      <span>Back to Homes</span>
+    </button>
+    <h2 className="text-2xl font-semibold">Appliances</h2>
+  </div>
+  
+  {/* Filter Button - MOVED TO FAR RIGHT */}
+  <div className="flex-1 flex justify-end">
+    <div className="flex items-center space-x-3">
+      {hasActiveFilters && (
+        <div className="bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+          Filters Active
+        </div>
+      )}
+      <button
+        onClick={() => setShowFilterModal(true)}
+        className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+      >
+        <img src={filterIcon} alt="Filter" className="w-4 h-4" />
+        <span>Filter</span>
+      </button>
+    </div>
+  </div>
+                  
+                  {/* REMOVED the extra Add Appliance button from here */}
                 </div>
               </div>
               <div className="p-8">
-                {(homes[selectedHomeIndex]?.appliances || []).length === 0 ? (
+                {/* Filter Summary */}
+                {hasActiveFilters && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <span className="text-sm font-medium text-blue-800">Active Filters:</span>
+                        {filterType !== 'all' && (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs">
+                            Type: {filterType}
+                          </span>
+                        )}
+                        {filterRoom !== 'all' && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs">
+                            Room: {rooms.find(r => (r._id || r.id) === filterRoom)?.name}
+                          </span>
+                        )}
+                        {filterEnergy !== 'all' && (
+                          <span className={`px-3 py-1 rounded-full text-xs ${
+                            filterEnergy === 'low' ? 'bg-green-100 text-green-800' :
+                            filterEnergy === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            Energy: {filterEnergy}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={resetFilters}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(filteredAppliances.length === 0 && (homes[selectedHomeIndex]?.appliances || []).length > 0) ? (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <img src={filterIcon} alt="No results" className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Matching Appliances</h3>
+                    <p className="text-gray-500 mb-6">Try adjusting your filters to see more results</p>
+                    <button
+                      onClick={resetFilters}
+                      className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                ) : (filteredAppliances.length === 0 && (homes[selectedHomeIndex]?.appliances || []).length === 0) ? (
                   <div className="text-center py-12">
                     <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <img src={applianceIcon} alt="No appliances" className="w-12 h-12 text-blue-500" />
@@ -1030,7 +1273,7 @@ const Appliance = ({ onSwitch }) => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                     <AddApplianceCard onClick={() => setShowAddModal(true)} />
-                    {(homes[selectedHomeIndex]?.appliances || []).map((appliance, index) => (
+                    {filteredAppliances.map((appliance, index) => (
                       <ApplianceCard
                         key={appliance.id || `appliance-${appliance.name}-${index}`}
                         name={appliance.name}
