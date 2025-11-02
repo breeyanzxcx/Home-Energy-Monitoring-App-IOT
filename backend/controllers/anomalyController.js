@@ -32,4 +32,72 @@ const getAnomalies = async (req, res, next) => {
   }
 };
 
-module.exports = { getAnomalies };
+// New function to resolve an anomaly
+const resolveAnomaly = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const anomaly = await AnomalyAlert.findOne({ _id: id, userId });
+
+    if (!anomaly) {
+      return res.status(404).json({ error: 'Anomaly alert not found' });
+    }
+
+    // Update status to resolved
+    anomaly.status = 'resolved';
+    await anomaly.save();
+
+    // Populate the updated document for response
+    const updatedAnomaly = await AnomalyAlert.findById(id)
+      .populate('homeId', 'name')
+      .populate('roomId', 'name')
+      .populate('applianceId', 'name energy_threshold');
+
+    res.json(updatedAnomaly);
+  } catch (err) {
+    logger.error(`Resolve anomaly error: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+// Optional: General status update function
+const updateAnomalyStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = req.user._id;
+
+    // Validate status
+    const validStatuses = ['active', 'acknowledged', 'resolved'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const anomaly = await AnomalyAlert.findOne({ _id: id, userId });
+
+    if (!anomaly) {
+      return res.status(404).json({ error: 'Anomaly alert not found' });
+    }
+
+    anomaly.status = status;
+    await anomaly.save();
+
+    // Populate the updated document for response
+    const updatedAnomaly = await AnomalyAlert.findById(id)
+      .populate('homeId', 'name')
+      .populate('roomId', 'name')
+      .populate('applianceId', 'name energy_threshold');
+
+    res.json(updatedAnomaly);
+  } catch (err) {
+    logger.error(`Update anomaly status error: ${err.message}`, { stack: err.stack });
+    next(err);
+  }
+};
+
+module.exports = { 
+  getAnomalies, 
+  resolveAnomaly, 
+  updateAnomalyStatus 
+};

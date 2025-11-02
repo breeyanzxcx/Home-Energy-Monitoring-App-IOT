@@ -434,8 +434,8 @@ setUser({
                     PERSONAL INFORMATION
                   </div>
                   <div className="p-6 space-y-4">
-                    <ProfileField label="Full Name" value={user.name} icon="Name" />
-                    <ProfileField label="Email Address" value={user.email} icon="Email" />
+                    <ProfileField label="" value={user.name} icon="Name" />
+                    <ProfileField label="" value={user.email} icon="Email" />
                     <div className="pt-2">
                       <h4 className="text-sm font-semibold text-gray-700 mb-3">Notification Preferences</h4>
                       <div className="space-y-2 text-sm">
@@ -464,7 +464,7 @@ setUser({
 
                 {/* Activity Overview */}
                 <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 font-bold text-lg">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-600 text-white px-6 py-3 font-bold text-lg">
                     ACTIVITY OVERVIEW
                   </div>
                   <div className="p-6 grid grid-cols-2 gap-4">

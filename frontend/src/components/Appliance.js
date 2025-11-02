@@ -5,22 +5,16 @@ import dashboardIcon from '../assets/icons/dashboard.svg';
 import applianceIcon from '../assets/icons/add.svg'; 
 import profileIcon from '../assets/icons/profile.svg';
 import logoutIcon from '../assets/icons/logout.svg';
+import deleteIcon from '../assets/icons/delete.svg';
+import editIcon from '../assets/icons/edit.svg';
+import houseIcon from '../assets/icons/house.svg';
+import airconIcon from '../assets/icons/aircon.svg';
+import kitchenIcon from '../assets/icons/kitchen.svg';
+import lightIcon from '../assets/icons/light.svg';
+import speakerIcon from '../assets/icons/speaker.svg';
+import televisionIcon from '../assets/icons/television.svg';
 
-// Reusable LeftIcon with SVG <img>
-const LeftIcon = ({ onClick, src, label }) => (
-  <div
-    onClick={onClick}
-    className="w-12 h-12 flex items-center justify-center rounded-md mb-3 
-               bg-blue-500 bg-opacity-100 text-white cursor-pointer 
-               hover:bg-blue-500 hover:bg-opacity-70 hover:text-yellow-300 
-               transition-all duration-200"
-    title={label}
-  >
-    <img src={src} alt={label} className="w-6 h-6" />
-  </div>
-);
-
-// Add this RIGHT AFTER the LeftIcon component
+// NavItem Component
 const NavItem = ({ onClick, src, label }) => (
   <div
     onClick={onClick}
@@ -34,40 +28,108 @@ const NavItem = ({ onClick, src, label }) => (
   </div>
 );
 
-const ApplianceCard = ({ name, image, onDelete }) => (
-  <div className="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-shadow cursor-pointer relative group">
+// Improved Appliance Card with better styling and edit functionality
+const ApplianceCard = ({ name, type, image, onDelete, onEdit, energy }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-between hover:shadow-xl transition-all duration-300 cursor-pointer relative group border border-gray-100 min-h-[180px]">
+    <div className="absolute top-3 right-3 flex space-x-1">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="bg-blue-500 hover:bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-md"
+      >
+        <img src={editIcon} alt="Edit" className="w-4 h-4" />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-md"
+      >
+        <img src={deleteIcon} alt="Delete" className="w-4 h-4" />
+      </button>
+    </div>
+    
+    <div className="flex flex-col items-center flex-1 justify-center">
+      <div className="w-16 h-16 mb-4 flex items-center justify-center bg-blue-50 rounded-2xl p-3">
+        <img src={image} alt={name} className="w-full h-full object-contain" style={{ filter: 'brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(2000%) hue-rotate(210deg) brightness(90%) contrast(90%)' }} />
+      </div>
+      <div className="text-center">
+        <div className="font-semibold text-gray-800 text-sm mb-1">{name}</div>
+        <div className="text-xs text-gray-500 capitalize">{type}</div>
+        {energy && (
+          <div className="text-xs text-blue-600 font-medium mt-1">
+            {energy} kWh
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+// Improved Add Card
+const AddApplianceCard = ({ onClick }) => (
+  <div 
+    onClick={onClick}
+    className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-dashed border-blue-200 hover:border-blue-300 min-h-[180px] group"
+  >
+    <div className="w-16 h-16 mb-4 flex items-center justify-center bg-white rounded-2xl p-3 group-hover:bg-blue-50 transition-colors">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
+        <path d="M12 5v14m-7-7h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    </div>
+    <div className="text-center">
+      <div className="font-semibold text-blue-600 text-sm">Add New Appliance</div>
+      <div className="text-xs text-gray-500 mt-1">Click to add</div>
+    </div>
+  </div>
+);
+
+// Improved Home Card
+const HomeCard = ({ home, onSelect, onDelete }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-between hover:shadow-xl transition-all duration-300 cursor-pointer relative group border border-gray-100 min-h-[180px]">
     <button
       onClick={(e) => {
         e.stopPropagation();
         onDelete();
       }}
-      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+      className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-md"
     >
-      X
+      <img src={deleteIcon} alt="Delete" className="w-4 h-4" />
     </button>
-    <img src={image} alt={name} className="w-16 h-16 object-contain mb-2" />
-    <div className="text-sm text-gray-600">{name}</div>
-  </div>
-);
-
-const AddApplianceCard = ({ onClick }) => (
-  <div onClick={onClick} className="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-shadow cursor-pointer">
-    <div className="w-16 h-16 flex items-center justify-center">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 5v14m-7-7h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
+    
+    <div className="flex flex-col items-center flex-1 justify-center">
+      <div className="w-16 h-16 mb-4 flex items-center justify-center bg-blue-50 rounded-2xl p-3">
+        <img src={houseIcon} alt="Home" className="w-full h-full object-contain filter-blue" style={{ filter: 'brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(2000%) hue-rotate(210deg) brightness(90%) contrast(90%)' }} />
+      </div>
+      <div className="text-center">
+        <div className="font-semibold text-gray-800 text-sm mb-1">{home.name}</div>
+        <div className="text-xs text-gray-500">
+          {home.appliances?.length || 0} appliance{(home.appliances?.length || 0) !== 1 ? 's' : ''}
+        </div>
+      </div>
     </div>
-    <div className="text-sm text-gray-600">Add new appliance</div>
+    
+    <button
+      onClick={onSelect}
+      className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200"
+    >
+      View Appliances
+    </button>
   </div>
 );
 
 const Appliance = ({ onSwitch }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [entryType, setEntryType] = useState('manual');
   const [selectedAppliance, setSelectedAppliance] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
   const [energy, setEnergy] = useState('');
+  const [applianceName, setApplianceName] = useState('');
   const [homes, setHomes] = useState([]);
   const [showAddHomeModal, setShowAddHomeModal] = useState(false);
   const [newHomeName, setNewHomeName] = useState('');
@@ -76,15 +138,47 @@ const Appliance = ({ onSwitch }) => {
   const [homeToDelete, setHomeToDelete] = useState(null);
   const [showDeleteApplianceConfirm, setShowDeleteApplianceConfirm] = useState(false);
   const [applianceToDelete, setApplianceToDelete] = useState(null);
+  const [applianceToEdit, setApplianceToEdit] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [rooms, setRooms] = useState([]);
 
+  // Updated default appliances with proper icons
   const defaultAppliances = [
-    { id: 'default-fridge', name: 'Fridge', image: 'data:image/svg+xml,%3Csvg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M6 9h12M6 15h12" stroke="currentColor" stroke-width="2"/%3E%3C/svg%3E', defaultEnergy: 1.5 },
-    { id: 'default-television', name: 'Television', image: 'data:image/svg+xml,%3Csvg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M4 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M8 18h8" stroke="currentColor" stroke-width="2"/%3E%3C/svg%3E', defaultEnergy: 0.5 },
-    { id: 'default-ac', name: 'Air Conditioner', image: 'data:image/svg+xml,%3Csvg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M4 6a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M8 16l4 4m4-4l-4 4" stroke="currentColor" stroke-width="2"/%3E%3C/svg%3E', defaultEnergy: 3.0 },
-    { id: 'default-lights', name: 'Lights', image: 'data:image/svg+xml,%3Csvg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M12 18V6m0 0h4a2 2 0 012 2v4a2 2 0 01-2 2h-4V6zM8 6h4m0 0h-4a2 2 0 00-2 2v4a2 2 0 002 2h4" stroke="currentColor" stroke-width="2"/%3E%3C/svg%3E', defaultEnergy: 0.1 },
-    { id: 'default-speaker', name: 'Speaker', image: 'data:image/svg+xml,%3Csvg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M12 8a4 4 0 100 8 4 4 0 000-8z" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" stroke="currentColor" stroke-width="2"/%3E%3C/svg%3E', defaultEnergy: 0.2 },
+    { 
+      id: 'default-fridge', 
+      name: 'Refrigerator', 
+      image: kitchenIcon, 
+      defaultEnergy: 1.5,
+      category: 'Kitchen'
+    },
+    { 
+      id: 'default-television', 
+      name: 'Television', 
+      image: televisionIcon, 
+      defaultEnergy: 0.5,
+      category: 'Entertainment'
+    },
+    { 
+      id: 'default-ac', 
+      name: 'Air Conditioner', 
+      image: airconIcon, 
+      defaultEnergy: 3.0,
+      category: 'Cooling'
+    },
+    { 
+      id: 'default-lights', 
+      name: 'Lighting', 
+      image: lightIcon, 
+      defaultEnergy: 0.1,
+      category: 'Lighting'
+    },
+    { 
+      id: 'default-speaker', 
+      name: 'Speaker', 
+      image: speakerIcon, 
+      defaultEnergy: 0.2,
+      category: 'Entertainment'
+    },
   ];
 
   const API_BASE = 'http://localhost:5000/api';
@@ -106,7 +200,9 @@ const Appliance = ({ onSwitch }) => {
             id: a._id || a.id,
             name: a.name,
             type: a.type,
-            image: defaultAppliances.find((da) => da.name === a.type)?.image || '',
+            energy_threshold: a.energy_threshold,
+            roomId: a.roomId,
+            image: defaultAppliances.find((da) => da.name === a.type)?.image || houseIcon,
           })),
         };
         return copy;
@@ -245,7 +341,8 @@ const Appliance = ({ onSwitch }) => {
               id: data._id || data.id,
               name: data.name,
               type: data.type,
-              image: baseAppliance ? baseAppliance.image : '',
+              energy_threshold: data.energy_threshold,
+              image: baseAppliance ? baseAppliance.image : houseIcon,
             },
           ],
         };
@@ -261,6 +358,64 @@ const Appliance = ({ onSwitch }) => {
     setSelectedAppliance('');
     setSelectedRoom('');
     setEnergy('');
+  };
+
+  const handleUpdateAppliance = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return onSwitch && onSwitch('login');
+    if (!applianceToEdit) return;
+
+    const payload = {
+      name: applianceName,
+      type: selectedAppliance,
+      energy_threshold: energy ? Number(energy) : undefined,
+      roomId: selectedRoom,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/appliances/${applianceToEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Update appliance failed');
+
+      // Update the appliance in state
+      setHomes((prev) => {
+        const copy = [...prev];
+        const applianceIndex = copy[selectedHomeIndex].appliances.findIndex(
+          (a) => a.id === applianceToEdit.id
+        );
+        if (applianceIndex !== -1) {
+          copy[selectedHomeIndex].appliances[applianceIndex] = {
+            ...copy[selectedHomeIndex].appliances[applianceIndex],
+            name: data.name,
+            type: data.type,
+            energy_threshold: data.energy_threshold,
+            roomId: data.roomId,
+          };
+        }
+        return copy;
+      });
+
+      setShowEditModal(false);
+      setApplianceToEdit(null);
+      setErrorMessage('');
+    } catch (err) {
+      console.error('Update appliance error', err.message || err);
+      setErrorMessage(err.message || 'Failed to update appliance');
+    }
+  };
+
+  const handleEditAppliance = (appliance, index) => {
+    setApplianceToEdit({ ...appliance, index });
+    setApplianceName(appliance.name);
+    setSelectedAppliance(appliance.type);
+    setSelectedRoom(appliance.roomId || '');
+    setEnergy(appliance.energy_threshold?.toString() || '');
+    setEntryType('manual'); // Default to manual for editing
+    setShowEditModal(true);
   };
 
   const handleAddHome = async () => {
@@ -355,70 +510,82 @@ const Appliance = ({ onSwitch }) => {
     }
   };
 
+  // Reset form when modals close
+  const resetForm = () => {
+    setSelectedAppliance('');
+    setSelectedRoom('');
+    setEnergy('');
+    setApplianceName('');
+    setEntryType('manual');
+    setErrorMessage('');
+  };
+
   return (
-    <div className="h-screen w-screen overflow-hidden relative font-sans">
+    <div className="h-screen w-screen overflow-hidden relative font-sans bg-gray-50">
       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1482192505345-5655af888cc4?auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center" />
       <div className="absolute inset-0 bg-black opacity-60 backdrop-blur-sm" />
 
-        {/* Sidebar */}
-   {/* SMOOTH Animated Sidebar - No Jerking */}
-   <aside className="fixed left-0 top-0 h-full z-30 flex items-center">
-     {/* Full-width invisible hover zone */}
-     <div className="relative h-64 w-32 flex items-center group cursor-pointer">
-       
-       {/* Arrow - Always visible when collapsed */}
-       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 rounded-r-full flex items-center justify-center shadow-lg transition-all duration-300 z-10
-                       group-hover:opacity-0 group-hover:-translate-x-8">
-         <svg
-           className="w-5 h-5 text-white transition-transform group-hover:scale-110"
-           fill="none"
-           stroke="currentColor"
-           viewBox="0 0 24 24"
-         >
-           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-         </svg>
-       </div>
-   
-       {/* Panel - Slides in from left */}
-       <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 opacity-0 invisible 
-                       group-hover:translate-x-8 group-hover:opacity-100 group-hover:visible 
-                       transition-all duration-300 ease-out pointer-events-auto">
-         <div className="bg-white p-3 rounded-lg shadow-lg flex flex-col items-center backdrop-blur-sm">
-           <NavItem onClick={() => onSwitch('dashboard')} src={dashboardIcon} label="Dashboard" />
-           <NavItem onClick={() => onSwitch('appliance')} src={applianceIcon} label="Appliances" />
-           <NavItem onClick={() => onSwitch('profile')} src={profileIcon} label="Profile" />
-           <NavItem onClick={() => setShowLogoutConfirm(true)} src={logoutIcon} label="Logout" />
-         </div>
-       </div>
-   
-     </div>
-   </aside>
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 h-full z-30 flex items-center">
+        <div className="relative h-64 w-32 flex items-center group cursor-pointer">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 bg-blue-600 rounded-r-full flex items-center justify-center shadow-lg transition-all duration-300 z-10
+                          group-hover:opacity-0 group-hover:-translate-x-8">
+            <svg
+              className="w-5 h-5 text-white transition-transform group-hover:scale-110"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-16 opacity-0 invisible 
+                          group-hover:translate-x-8 group-hover:opacity-100 group-hover:visible 
+                          transition-all duration-300 ease-out pointer-events-auto">
+            <div className="bg-white p-3 rounded-lg shadow-lg flex flex-col items-center backdrop-blur-sm">
+              <NavItem onClick={() => onSwitch('dashboard')} src={dashboardIcon} label="Dashboard" />
+              <NavItem onClick={() => onSwitch('appliance')} src={applianceIcon} label="Appliances" />
+              <NavItem onClick={() => onSwitch('profile')} src={profileIcon} label="Profile" />
+              <NavItem onClick={() => setShowLogoutConfirm(true)} src={logoutIcon} label="Logout" />
+            </div>
+          </div>
+        </div>
+      </aside>
 
+      {/* Error Toast */}
       {errorMessage && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50">
-          {errorMessage}
-          <button onClick={() => setErrorMessage('')} className="ml-4 text-sm underline">
-            Close
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 flex items-center space-x-3 max-w-sm">
+          <div className="flex-1">
+            <div className="font-medium">Error</div>
+            <div className="text-sm opacity-90">{errorMessage}</div>
+          </div>
+          <button 
+            onClick={() => setErrorMessage('')} 
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
       )}
 
-      {/* Modals and UI below remain unchanged */}
+      {/* Modals */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4 w-full">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Confirm Logout</h3>
             <p className="text-gray-600 mb-6 text-center">Are you sure you want to logout?</p>
             <div className="flex justify-center items-center gap-4">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded border border-gray-300 hover:border-gray-400"
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded-lg border border-gray-300 hover:border-gray-400 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => onSwitch('login')}
-                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Logout
               </button>
@@ -427,133 +594,254 @@ const Appliance = ({ onSwitch }) => {
         </div>
       )}
 
+      {/* Add Appliance Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full relative">
             <button
-              onClick={() => setShowAddModal(false)}
-              className="absolute top-2 left-2 text-gray-600 hover:text-gray-800"
+              onClick={() => {
+                setShowAddModal(false);
+                resetForm();
+              }}
+              className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              ←
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Add appliance</h3>
-            <div className="flex justify-center mb-4">
-              <label className="mr-4">
-                <input
-                  type="radio"
-                  name="entryType"
-                  value="manual"
-                  checked={entryType === 'manual'}
-                  onChange={(e) => setEntryType(e.target.value)}
-                  className="mr-1"
-                />
-                Manual kWh Entry
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="entryType"
-                  value="appliance"
-                  checked={entryType === 'appliance'}
-                  onChange={(e) => setEntryType(e.target.value)}
-                  className="mr-1"
-                />
-                Appliance-based Entry
-              </label>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-600 mb-1">Appliance:</label>
-              <select
-                value={selectedAppliance}
-                onChange={(e) => setSelectedAppliance(e.target.value)}
-                className="w-full p-2 border border-gray-200 rounded-lg"
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">Add New Appliance</h3>
+            
+            <div className="flex justify-center mb-6 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setEntryType('manual')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  entryType === 'manual' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
-                <option value="">Choose an appliance</option>
-                {defaultAppliances.map((appliance) => (
-                  <option key={appliance.id} value={appliance.name}>
-                    {appliance.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-600 mb-1">Room:</label>
-              <select
-                value={selectedRoom}
-                onChange={(e) => setSelectedRoom(e.target.value)}
-                className="w-full p-2 border border-gray-200 rounded-lg"
-                required
+                Manual Entry
+              </button>
+              <button
+                onClick={() => setEntryType('appliance')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  entryType === 'appliance' 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
               >
-                <option value="">Select a room</option>
-                {rooms.map((room) => (
-                  <option key={room._id || room.id} value={room._id || room.id}>
-                    {room.name}
-                  </option>
-                ))}
-              </select>
+                Appliance Type
+              </button>
             </div>
-            {entryType === 'manual' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-600 mb-1">Energy:</label>
-                <input
-                  type="number"
-                  value={energy}
-                  onChange={(e) => setEnergy(e.target.value)}
-                  placeholder="Input kWh"
-                  className="w-full p-2 border border-gray-200 rounded-lg"
-                />
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Appliance Type</label>
+                <select
+                  value={selectedAppliance}
+                  onChange={(e) => setSelectedAppliance(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Choose an appliance</option>
+                  {defaultAppliances.map((appliance) => (
+                    <option key={appliance.id} value={appliance.name}>
+                      {appliance.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-            {entryType === 'appliance' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-600 mb-1">Energy:</label>
-                <div className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                  Auto-calculated based on appliance type
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
+                <select
+                  value={selectedRoom}
+                  onChange={(e) => setSelectedRoom(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  required
+                >
+                  <option value="">Select a room</option>
+                  {rooms.map((room) => (
+                    <option key={room._id || room.id} value={room._id || room.id}>
+                      {room.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {entryType === 'manual' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Energy Consumption (kWh)</label>
+                  <input
+                    type="number"
+                    value={energy}
+                    onChange={(e) => setEnergy(e.target.value)}
+                    placeholder="Enter energy consumption"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    step="0.1"
+                    min="0"
+                  />
                 </div>
-              </div>
-            )}
-            {selectedAppliance && (
-              <div className="flex justify-end mb-4">
-                <img
-                  src={defaultAppliances.find((a) => a.name === selectedAppliance)?.image}
-                  alt={selectedAppliance}
-                  className="w-16 h-16 object-contain"
-                />
-              </div>
-            )}
+              )}
+
+              {entryType === 'appliance' && selectedAppliance && (
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="text-sm text-blue-700">
+                    Estimated consumption: {defaultAppliances.find(a => a.name === selectedAppliance)?.defaultEnergy} kWh
+                  </div>
+                </div>
+              )}
+
+              {selectedAppliance && (
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 bg-blue-50 rounded-2xl p-4 flex items-center justify-center">
+                    <img
+                      src={defaultAppliances.find((a) => a.name === selectedAppliance)?.image}
+                      alt={selectedAppliance}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleConfirm}
-              className="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              disabled={!selectedRoom || !selectedAppliance}
+              className="w-full mt-6 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              Confirm
+              Add Appliance
             </button>
           </div>
         </div>
       )}
 
+      {/* Edit Appliance Modal */}
+      {showEditModal && applianceToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full relative">
+            <button
+              onClick={() => {
+                setShowEditModal(false);
+                setApplianceToEdit(null);
+                resetForm();
+              }}
+              className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">Edit Appliance</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Appliance Name</label>
+                <input
+                  type="text"
+                  value={applianceName}
+                  onChange={(e) => setApplianceName(e.target.value)}
+                  placeholder="Enter appliance name"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Appliance Type</label>
+                <select
+                  value={selectedAppliance}
+                  onChange={(e) => setSelectedAppliance(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Choose an appliance</option>
+                  {defaultAppliances.map((appliance) => (
+                    <option key={appliance.id} value={appliance.name}>
+                      {appliance.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Room</label>
+                <select
+                  value={selectedRoom}
+                  onChange={(e) => setSelectedRoom(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  required
+                >
+                  <option value="">Select a room</option>
+                  {rooms.map((room) => (
+                    <option key={room._id || room.id} value={room._id || room.id}>
+                      {room.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Energy Consumption (kWh)</label>
+                <input
+                  type="number"
+                  value={energy}
+                  onChange={(e) => setEnergy(e.target.value)}
+                  placeholder="Enter energy consumption"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  step="0.1"
+                  min="0"
+                />
+              </div>
+
+              {selectedAppliance && (
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 bg-blue-50 rounded-2xl p-4 flex items-center justify-center">
+                    <img
+                      src={defaultAppliances.find((a) => a.name === selectedAppliance)?.image}
+                      alt={selectedAppliance}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleUpdateAppliance}
+              disabled={!selectedRoom || !selectedAppliance || !applianceName.trim()}
+              className="w-full mt-6 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              Update Appliance
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Home Modal */}
       {showAddHomeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 w-full relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full relative">
             <button
               onClick={() => setShowAddHomeModal(false)}
-              className="absolute top-2 left-2 text-gray-600 hover:text-gray-800"
+              className="absolute top-4 left-4 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              ←
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">Add home</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-600 mb-1">Home name:</label>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">Create New Home</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Home Name</label>
               <input
                 type="text"
                 value={newHomeName}
                 onChange={(e) => setNewHomeName(e.target.value)}
-                placeholder="e.g. Home 1"
-                className="w-full p-2 border border-gray-200 rounded-lg"
+                placeholder="e.g., My Home, Apartment, Villa..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
             <button
               onClick={handleAddHome}
-              className="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              disabled={!newHomeName.trim()}
+              className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
             >
               Create Home
             </button>
@@ -561,12 +849,13 @@ const Appliance = ({ onSwitch }) => {
         </div>
       )}
 
+      {/* Delete Confirmation Modals */}
       {showDeleteHomeConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Delete Home</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{homeToDelete?.name}</strong>? This action cannot be undone and all appliances in this home will be deleted.
+              Are you sure you want to delete <strong>{homeToDelete?.name}</strong>? This action cannot be undone.
             </p>
             <div className="flex justify-center items-center gap-4">
               <button
@@ -574,13 +863,13 @@ const Appliance = ({ onSwitch }) => {
                   setShowDeleteHomeConfirm(false);
                   setHomeToDelete(null);
                 }}
-                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded border border-gray-300 hover:border-gray-400"
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded-lg border border-gray-300 hover:border-gray-400 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteHome(homeToDelete.index)}
-                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
@@ -590,11 +879,11 @@ const Appliance = ({ onSwitch }) => {
       )}
 
       {showDeleteApplianceConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Delete Appliance</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{applianceToDelete?.name}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{applianceToDelete?.name}</strong>?
             </p>
             <div className="flex justify-center items-center gap-4">
               <button
@@ -602,13 +891,13 @@ const Appliance = ({ onSwitch }) => {
                   setShowDeleteApplianceConfirm(false);
                   setApplianceToDelete(null);
                 }}
-                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded border border-gray-300 hover:border-gray-400"
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 rounded-lg border border-gray-300 hover:border-gray-400 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDeleteAppliance(applianceToDelete.id, applianceToDelete.index)}
-                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
@@ -617,79 +906,146 @@ const Appliance = ({ onSwitch }) => {
         </div>
       )}
 
-      <div className="relative z-10 h-full w-full flex items-start justify-center">
-        <div className="w-[94%] max-w-[1200px] mt-6">
+      {/* Main Content */}
+      <div className="relative z-10 h-full w-full flex items-start justify-center overflow-y-auto py-8">
+        <div className="w-[94%] max-w-[1200px]">
           <div className="text-center mb-8">
-            <h1 className="text-3xl tracking-wider font-bold text-white">
-              {selectedHomeIndex === null || !homes[selectedHomeIndex] ? 'HOMES' : homes[selectedHomeIndex]?.name || 'HOME'}
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-wide">
+              {selectedHomeIndex === null ? 'MY HOMES' : homes[selectedHomeIndex]?.name?.toUpperCase() || 'APPLIANCES'}
             </h1>
+            <p className="text-blue-100 text-lg">
+              {selectedHomeIndex === null 
+                ? 'Manage your homes and their appliances' 
+                : `Manage appliances in ${homes[selectedHomeIndex]?.name}`}
+            </p>
           </div>
 
-          {selectedHomeIndex === null || !homes[selectedHomeIndex] ? (
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-              <div className="bg-blue-500 text-white px-6 py-5 font-semibold rounded-t-xl"></div>
-              <div className="p-6">
-                <div className="grid grid-cols-6 gap-4">
-                  <div
+          {selectedHomeIndex === null ? (
+            // Homes Grid View
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+              <div className="bg-blue-500/80 text-white px-8 py-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-semibold">Your Homes</h2>
+                  <button
                     onClick={() => setShowAddHomeModal(true)}
-                    className="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-shadow cursor-pointer"
+                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2"
                   >
-                    <div className="w-16 h-16 flex items-center justify-center text-2xl">+</div>
-                    <div className="text-sm text-gray-600">Add new home</div>
-                  </div>
-                  {homes.map((home, index) => (
-                    <div
-                      key={home.id || `home-${index}`}
-                      className="bg-white rounded-lg shadow-sm p-4 flex flex-col items-center justify-center hover:shadow-md transition-shadow cursor-pointer relative group"
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Add Home</span>
+                  </button>
+                </div>
+              </div>
+              <div className="p-8">
+                {homes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <img src={houseIcon} alt="No homes" className="w-12 h-12 text-blue-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Homes Yet</h3>
+                    <p className="text-gray-500 mb-6">Create your first home to start adding appliances</p>
+                    <button
+                      onClick={() => setShowAddHomeModal(true)}
+                      className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                     >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      Create Your First Home
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {homes.map((home, index) => (
+                      <HomeCard
+                        key={home.id || `home-${index}`}
+                        home={home}
+                        onSelect={() => handleSelectHome(index)}
+                        onDelete={() => {
                           setHomeToDelete({ name: home.name, index });
                           setShowDeleteHomeConfirm(true);
                         }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        X
-                      </button>
-                      <div
-                        onClick={() => handleSelectHome(index)}
-                        className="w-full cursor-pointer"
-                      >
-                        <div className="w-16 h-16 flex items-center justify-center mb-2 text-xl mx-auto">House</div>
-                        <div className="text-sm text-gray-600 text-center">{home.name}</div>
-                        <div className="text-xs text-gray-400 mt-2 text-center">{(home.appliances || []).length} appliances</div>
+                      />
+                    ))}
+                    {/* Add Home Card */}
+                    <div 
+                      onClick={() => setShowAddHomeModal(true)}
+                      className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 flex flex-col items-center justify-center hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-dashed border-blue-200 hover:border-blue-300 min-h-[180px] group"
+                    >
+                      <div className="w-16 h-16 mb-4 flex items-center justify-center bg-white rounded-2xl p-3 group-hover:bg-blue-50 transition-colors">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
+                          <path d="M12 4v16m8-8H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-semibold text-blue-600 text-sm">Add New Home</div>
+                        <div className="text-xs text-gray-500 mt-1">Click to create</div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-              <div className="bg-blue-500 text-white px-4 py-2 font-semibold rounded-t-xl flex items-center">
-                <button onClick={handleBackToHomes} className="text-sm bg-white bg-opacity-10 px-3 py-1 rounded mr-4">
-                  ← Homes
-                </button>
+            // Appliances Grid View
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+              <div className="bg-blue-600/80 text-white px-8 py-6">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-4">
+                    <button 
+                      onClick={handleBackToHomes}
+                      className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      <span>Back to Homes</span>
+                    </button>
+                    <h2 className="text-2xl font-semibold">Appliances</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Add Appliance</span>
+                  </button>
+                </div>
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-6 gap-4">
-                  <AddApplianceCard onClick={() => setShowAddModal(true)} />
-                  {(homes[selectedHomeIndex]?.appliances || []).map((appliance, index) => {
-                    const baseAppliance = defaultAppliances.find((a) => a.name === appliance.type);
-                    return (
+              <div className="p-8">
+                {(homes[selectedHomeIndex]?.appliances || []).length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <img src={applianceIcon} alt="No appliances" className="w-12 h-12 text-blue-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Appliances Yet</h3>
+                    <p className="text-gray-500 mb-6">Add your first appliance to start monitoring energy usage</p>
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    >
+                      Add Your First Appliance
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                    <AddApplianceCard onClick={() => setShowAddModal(true)} />
+                    {(homes[selectedHomeIndex]?.appliances || []).map((appliance, index) => (
                       <ApplianceCard
                         key={appliance.id || `appliance-${appliance.name}-${index}`}
                         name={appliance.name}
-                        image={baseAppliance ? baseAppliance.image : appliance.image}
+                        type={appliance.type}
+                        image={appliance.image}
+                        energy={appliance.energy_threshold}
                         onDelete={() => {
                           setApplianceToDelete({ id: appliance.id, name: appliance.name, index });
                           setShowDeleteApplianceConfirm(true);
                         }}
+                        onEdit={() => handleEditAppliance(appliance, index)}
                       />
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Apply the font globally */
+body {
+  font-family: 'Bebas Neue', sans-serif; /* Fallback to sans-serif if the font fails to load */
+}
+
+/* Optional: Apply to html/root for completeness (e.g., for modals/portals) */
+:root {
+  font-family: 'Bebas Neue', sans-serif;
+}
