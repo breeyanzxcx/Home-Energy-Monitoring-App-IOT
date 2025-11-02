@@ -36,7 +36,7 @@ const CardHeader = ({ title, controls }) => (
   </div>
 );
 const CardContent = ({ children }) => (
-  <div className="p-4 bg-white flex items-center justify-center">{children}</div>
+  <div className="p-4 bg-white flex items-center justify-center min-h-[200px]">{children}</div>
 );
 const NavItem = ({ onClick, src, label }) => (
   <div
@@ -50,8 +50,9 @@ const NavItem = ({ onClick, src, label }) => (
     <img src={src} alt={label} className="w-6 h-6" />
   </div>
 );
-// ---------- Improved Anomaly List Component ----------
-const AnomalyList = ({ homeId }) => {
+
+// ---------- Enhanced Anomaly List Component with Graph Toggle ----------
+const AnomalyList = ({ homeId, viewMode = 'list' }) => {
   const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnomaly, setSelectedAnomaly] = useState(null);
@@ -60,6 +61,46 @@ const AnomalyList = ({ homeId }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const API_BASE = "http://localhost:5000/api";
+
+  // Move severityConfig to the top to avoid initialization issues
+  const severityConfig = {
+    high: {
+      bg: "bg-red-50",
+      border: "border-red-200",
+      text: "text-red-800",
+      badge: "bg-red-100 text-red-800 border-red-200",
+      color: '#EF4444'
+    },
+    medium: {
+      bg: "bg-orange-50",
+      border: "border-orange-200", 
+      text: "text-orange-800",
+      badge: "bg-orange-100 text-orange-800 border-orange-200",
+      color: '#F97316'
+    },
+    low: {
+      bg: "bg-yellow-50",
+      border: "border-yellow-200",
+      text: "text-yellow-800",
+      badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      color: '#EAB308'
+    }
+  };
+
+  const statusConfig = {
+    active: {
+      badge: "bg-blue-100 text-blue-800 border-blue-200",
+      text: "Active"
+    },
+    acknowledged: {
+      badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      text: "Acknowledged"
+    },
+    resolved: {
+      badge: "bg-green-100 text-green-800 border-green-200", 
+      text: "Resolved"
+    }
+  };
   
   useEffect(() => {
     fetchAnomalies();
@@ -75,7 +116,7 @@ const AnomalyList = ({ homeId }) => {
     try {
       setLoading(true);
       const res = await fetch(
-        `${API_BASE}/anomalies?homeId=${homeId}&limit=10`,
+        `${API_BASE}/anomalies?homeId=${homeId}&limit=50`, // Increased limit for better graph data
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -93,6 +134,66 @@ const AnomalyList = ({ homeId }) => {
       setLoading(false);
     }
   };
+
+  // Process data for the line graph
+  const getGraphData = useMemo(() => {
+    if (!anomalies.length) return [];
+
+    // Group anomalies by date
+    const anomaliesByDate = anomalies.reduce((acc, anomaly) => {
+      const date = new Date(anomaly.detected_at).toLocaleDateString();
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          total: 0,
+          high: 0,
+          medium: 0,
+          low: 0,
+          unusual_spike: 0,
+          high_energy: 0
+        };
+      }
+      
+      acc[date].total++;
+      acc[date][anomaly.severity] = (acc[date][anomaly.severity] || 0) + 1;
+      acc[date][anomaly.alert_type] = (acc[date][anomaly.alert_type] || 0) + 1;
+      
+      return acc;
+    }, {});
+
+    // Convert to array and sort by date
+    return Object.values(anomaliesByDate)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(-15); // Last 15 days
+  }, [anomalies]);
+
+  // Get severity distribution for pie chart
+  const getSeverityData = useMemo(() => {
+    const severityCount = anomalies.reduce((acc, anomaly) => {
+      acc[anomaly.severity] = (acc[anomaly.severity] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(severityCount).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value,
+      fill: severityConfig[name]?.color || '#6B7280'
+    }));
+  }, [anomalies, severityConfig]);
+
+  // Get alert type distribution
+  const getAlertTypeData = useMemo(() => {
+    const typeCount = anomalies.reduce((acc, anomaly) => {
+      const type = anomaly.alert_type.replace(/_/g, ' ');
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(typeCount).map(([name, value]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      value
+    }));
+  }, [anomalies]);
 
   const handleResolveAnomaly = async (anomalyId) => {
     const token = localStorage.getItem("token");
@@ -179,42 +280,6 @@ const AnomalyList = ({ homeId }) => {
     setPendingAction(null);
   };
 
-  const severityConfig = {
-    high: {
-      bg: "bg-red-50",
-      border: "border-red-200",
-      text: "text-red-800",
-      badge: "bg-red-100 text-red-800 border-red-200"
-    },
-    medium: {
-      bg: "bg-orange-50",
-      border: "border-orange-200", 
-      text: "text-orange-800",
-      badge: "bg-orange-100 text-orange-800 border-orange-200"
-    },
-    low: {
-      bg: "bg-yellow-50",
-      border: "border-yellow-200",
-      text: "text-yellow-800",
-      badge: "bg-yellow-100 text-yellow-800 border-yellow-200"
-    }
-  };
-
-  const statusConfig = {
-    active: {
-      badge: "bg-blue-100 text-blue-800 border-blue-200",
-      text: "Active"
-    },
-    acknowledged: {
-      badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      text: "Acknowledged"
-    },
-    resolved: {
-      badge: "bg-green-100 text-green-800 border-green-200", 
-      text: "Resolved"
-    }
-  };
-
   const getTimeAgo = (date) => {
     const now = new Date();
     const diffMs = now - new Date(date);
@@ -228,6 +293,221 @@ const AnomalyList = ({ homeId }) => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return new Date(date).toLocaleDateString();
   };
+
+  // Graph View Component
+  const GraphView = () => (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <div className="text-2xl font-bold text-gray-900">{anomalies.length}</div>
+          <div className="text-sm text-gray-600">Total Anomalies</div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <div className="text-2xl font-bold text-red-600">
+            {anomalies.filter(a => a.severity === 'high').length}
+          </div>
+          <div className="text-sm text-gray-600">High Severity</div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <div className="text-2xl font-bold text-blue-600">
+            {anomalies.filter(a => a.status === 'active').length}
+          </div>
+          <div className="text-sm text-gray-600">Active Alerts</div>
+        </div>
+      </div>
+
+      {/* Line Chart - Anomalies Over Time */}
+      <div className="bg-white rounded-lg p-4 shadow border">
+        <h4 className="font-semibold text-gray-900 mb-4">Anomaly Trends Over Time</h4>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={getGraphData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis 
+              dataKey="date" 
+              angle={-45}
+              textAnchor="end"
+              height={60}
+              interval={0}
+              fontSize={10}
+            />
+            <YAxis fontSize={10} />
+            <Tooltip />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="total" 
+              stroke="#3B82F6" 
+              name="Total Anomalies"
+              strokeWidth={2}
+              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="high" 
+              stroke="#EF4444" 
+              name="High Severity"
+              strokeWidth={2}
+              dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Distribution Charts */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Severity Distribution */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h4 className="font-semibold text-gray-900 mb-4">Severity Distribution</h4>
+          <ResponsiveContainer width="100%" height={150}>
+            <PieChart>
+              <Pie
+                data={getSeverityData}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={60}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {getSeverityData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Alert Type Distribution */}
+        <div className="bg-white rounded-lg p-4 shadow border">
+          <h4 className="font-semibold text-gray-900 mb-4">Alert Type Distribution</h4>
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={getAlertTypeData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="name" 
+                angle={-45}
+                textAnchor="end"
+                height={40}
+                fontSize={10}
+              />
+              <YAxis fontSize={10} />
+              <Tooltip />
+              <Bar dataKey="value" fill="#8B5CF6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Recent Anomalies Mini List */}
+      <div className="bg-white rounded-lg p-4 shadow border">
+        <h4 className="font-semibold text-gray-900 mb-4">Recent Anomalies</h4>
+        <div className="space-y-2 max-h-40 overflow-y-auto">
+          {anomalies.slice(0, 5).map((alert) => (
+            <div
+              key={alert._id}
+              className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer"
+              onClick={() => {
+                setSelectedAnomaly(alert);
+                setShowDetailsModal(true);
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${
+                  alert.severity === 'high' ? 'bg-red-500' :
+                  alert.severity === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'
+                }`} />
+                <span className="text-sm font-medium">{alert.applianceId?.name || "Unknown"}</span>
+              </div>
+              <span className="text-xs text-gray-500">
+                {getTimeAgo(alert.detected_at)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // List View Component (your existing list view)
+  const ListView = () => (
+    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+      {anomalies.map((alert) => {
+        const severity = severityConfig[alert.severity] || severityConfig.low;
+        const status = statusConfig[alert.status] || statusConfig.active;
+        const appliance = alert.applianceId?.name || "Unknown Appliance";
+        const room = alert.roomId?.name || "Unknown Room";
+        
+        return (
+          <div
+            key={alert._id}
+            className={`p-4 rounded-xl border-2 ${severity.bg} ${severity.border} transition-all hover:shadow-md cursor-pointer group`}
+            onClick={() => {
+              setSelectedAnomaly(alert);
+              setShowDetailsModal(true);
+            }}
+          >
+            {/* Header - Appliance name left, status badges right */}
+            <div className="flex justify-between items-start mb-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold text-gray-900 text-sm truncate text-left">{appliance}</div>
+              </div>
+              <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${severity.badge}`}>
+                  {alert.severity}
+                </span>
+                <span className={`text-xs px-2 py-1 rounded-full border ${status.badge}`}>
+                  {status.text}
+                </span>
+              </div>
+            </div>
+
+            {/* Content - Left Aligned */}
+            <div className="space-y-2">
+              <div className={`text-sm font-medium ${severity.text} text-left leading-relaxed`}>
+                {alert.description}
+              </div>
+            </div>
+
+            {/* Footer - Left Aligned */}
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center space-x-1 text-xs text-gray-600">
+                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+                <span className="truncate">{room}</span>
+              </div>
+              
+              {/* Quick Actions - Right Aligned */}
+              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    confirmResolveAnomaly(alert._id, appliance);
+                  }}
+                  disabled={actionLoading === alert._id}
+                  className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {actionLoading === alert._id ? '...' : 'Resolve'}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    confirmDeleteAnomaly(alert._id, appliance);
+                  }}
+                  disabled={actionLoading === alert._id}
+                  className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {actionLoading === alert._id ? '...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -256,81 +536,8 @@ const AnomalyList = ({ homeId }) => {
 
   return (
     <>
-      <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-        {anomalies.map((alert) => {
-          const severity = severityConfig[alert.severity] || severityConfig.low;
-          const status = statusConfig[alert.status] || statusConfig.active;
-          const appliance = alert.applianceId?.name || "Unknown Appliance";
-          const room = alert.roomId?.name || "Unknown Room";
-          
-          return (
-            <div
-              key={alert._id}
-              className={`p-4 rounded-xl border-2 ${severity.bg} ${severity.border} transition-all hover:shadow-md cursor-pointer group`}
-              onClick={() => {
-                setSelectedAnomaly(alert);
-                setShowDetailsModal(true);
-              }}
-            >
-              {/* Header - Appliance name left, status badges right */}
-              <div className="flex justify-between items-start mb-3">
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-gray-900 text-sm truncate text-left">{appliance}</div>
-                </div>
-                <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${severity.badge}`}>
-                    {alert.severity}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-full border ${status.badge}`}>
-                    {status.text}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content - Left Aligned */}
-              <div className="space-y-2">
-                <div className={`text-sm font-medium ${severity.text} text-left leading-relaxed`}>
-                  {alert.description}
-                </div>
-              </div>
-
-              {/* Footer - Left Aligned */}
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-                <div className="flex items-center space-x-1 text-xs text-gray-600">
-                  <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span className="truncate">{room}</span>
-                </div>
-                
-                {/* Quick Actions - Right Aligned */}
-                <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      confirmResolveAnomaly(alert._id, appliance);
-                    }}
-                    disabled={actionLoading === alert._id}
-                    className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors disabled:opacity-50 flex-shrink-0"
-                  >
-                    {actionLoading === alert._id ? '...' : 'Resolve'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      confirmDeleteAnomaly(alert._id, appliance);
-                    }}
-                    disabled={actionLoading === alert._id}
-                    className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0"
-                  >
-                    {actionLoading === alert._id ? '...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Content */}
+      {viewMode === 'list' ? <ListView /> : <GraphView />}
 
       {/* Anomaly Details Modal */}
       {showDetailsModal && selectedAnomaly && (
@@ -497,6 +704,7 @@ const AnomalyList = ({ homeId }) => {
     </>
   );
 };
+
 // ---------- Notifications Dropdown and Popup ----------
 const NotificationsUI = ({ homeId }) => {
   const [notifications, setNotifications] = useState([]);
@@ -907,9 +1115,11 @@ const NotificationsUI = ({ homeId }) => {
     </>
   );
 };
+
 // ---------- Dashboard Component ----------
 const Dashboard = ({ onSwitch }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [anomalyViewMode, setAnomalyViewMode] = useState('list'); // Add this state
   const bgUrl =
     "https://images.unsplash.com/photo-1501183638710-841dd1904471?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170"
   // ---------- Global states ----------
@@ -1299,9 +1509,35 @@ const Dashboard = ({ onSwitch }) => {
                   </Card>
                   {/* Anomaly Alerts */}
                   <Card>
-                    <CardHeader title="ANOMALY ALERTS" />
+                    <CardHeader 
+                      title="ANOMALY ALERTS" 
+                      controls={
+                        <div className="flex bg-gray-100 rounded-lg p-1">
+                          <button
+                            onClick={() => setAnomalyViewMode('list')}
+                            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                              anomalyViewMode === 'list' 
+                                ? 'bg-white text-blue-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            List View
+                          </button>
+                          <button
+                            onClick={() => setAnomalyViewMode('graph')}
+                            className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                              anomalyViewMode === 'graph' 
+                                ? 'bg-white text-blue-600 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            Analytics
+                          </button>
+                        </div>
+                      }
+                    />
                     <CardContent>
-                      <AnomalyList homeId={selectedHome?._id || selectedHome?.id} />
+                      <AnomalyList homeId={selectedHome?._id || selectedHome?.id} viewMode={anomalyViewMode} />
                     </CardContent>
                   </Card>
                   {/* Bills */}
@@ -1316,84 +1552,91 @@ const Dashboard = ({ onSwitch }) => {
                     </div>
                   </div>
                 </div>
-                {/* RIGHT COLUMN */}
-                <div className="flex flex-col gap-6">
-                  <Card className="flex-1">
-                    <CardHeader title="CONSUMPTION BY ROOM" />
-                    <CardContent>
-                      {roomData.length === 0 ? (
-                        <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
-                          No rooms available.
-                        </div>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={260}>
-                          <PieChart>
-                            <Pie
-                              data={roomData}
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={90}
-                              dataKey="value"
-                              nameKey="name"
-                              isAnimationActive={false}
-                              labelLine={false}
-                              label={({ percent }) =>
-                                `${(percent * 100).toFixed(0)}%`
-                              }
-                              style={{ fontSize: "11px" }}
-                            >
-                              {roomData.map((_, i) => (
-                                <Cell
-                                  key={`cell-${i}`}
-                                  fill={COLORS[i % COLORS.length]}
-                                />
-                              ))}
-                            </Pie>
-                            <Tooltip
-                              formatter={(v) => [`${v} kWh`, "Consumption"]}
-                              labelFormatter={(l) => `Room: ${l}`}
-                            />
-                            <Legend
-                              verticalAlign="bottom"
-                              height={24}
-                              wrapperStyle={{ fontSize: "11px" }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card className="flex-1">
-                    <CardHeader title="APPLIANCES" />
-                    <CardContent>
-                      {applianceData.length === 0 ? (
-                        <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
-                          No appliance data.
-                        </div>
-                      ) : (
-                        <ResponsiveContainer width="100%" height={220}>
-                          <BarChart data={applianceData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="name"
-                              style={{ fontSize: "10px" }}
-                            />
-                            <YAxis style={{ fontSize: "10px" }} />
-                            <Tooltip />
-                            <Bar dataKey="value">
-                              {applianceData.map((_, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={COLORS[i % COLORS.length]}
-                                />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+               {/* RIGHT COLUMN */}
+<div className="flex flex-col gap-6">
+  {/* Consumption by Room - Fixed Centering */}
+  <Card className="flex-1 flex flex-col">
+    <CardHeader title="CONSUMPTION BY ROOM" />
+    <div className="flex-1 flex items-center justify-center p-6 min-h-[300px]">
+      {roomData.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
+          No rooms available.
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={roomData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                dataKey="value"
+                nameKey="name"
+                isAnimationActive={false}
+                labelLine={false}
+                label={({ percent }) =>
+                  `${(percent * 100).toFixed(0)}%`
+                }
+                style={{ fontSize: "11px" }}
+              >
+                {roomData.map((_, i) => (
+                  <Cell
+                    key={`cell-${i}`}
+                    fill={COLORS[i % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v) => [`${v} kWh`, "Consumption"]}
+                labelFormatter={(l) => `Room: ${l}`}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={24}
+                wrapperStyle={{ fontSize: "11px" }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  </Card>
+  
+  {/* Appliances - Fixed Centering */}
+  <Card className="flex-1 flex flex-col">
+    <CardHeader title="APPLIANCES" />
+    <div className="flex-1 flex items-center justify-center p-6 min-h-[300px]">
+      {applianceData.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
+          No appliance data.
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={applianceData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                style={{ fontSize: "10px" }}
+              />
+              <YAxis style={{ fontSize: "10px" }} />
+              <Tooltip />
+              <Bar dataKey="value">
+                {applianceData.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={COLORS[i % COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  </Card>
+</div>
               </div>
               {/* ENHANCED HISTORY SECTION */}
               <div className="bg-white rounded-xl shadow-xl overflow-hidden">
