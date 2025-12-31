@@ -1119,7 +1119,7 @@ const NotificationsUI = ({ homeId }) => {
 // ---------- Dashboard Component ----------
 const Dashboard = ({ onSwitch }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [anomalyViewMode, setAnomalyViewMode] = useState('list'); // Add this state
+  const [anomalyViewMode, setAnomalyViewMode] = useState('list');
   const bgUrl =
     "https://images.unsplash.com/photo-1501183638710-841dd1904471?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170"
   // ---------- Global states ----------
@@ -1135,6 +1135,13 @@ const Dashboard = ({ onSwitch }) => {
   const [overallBill, setOverallBill] = useState("₱0");
   const [upcomingBill, setUpcomingBill] = useState("₱0");
   const API_BASE = "http://localhost:5000/api";
+  
+  // Add state for current month/year
+  const [currentPeriod, setCurrentPeriod] = useState({
+    month: new Date().getMonth(),
+    year: new Date().getFullYear()
+  });
+
   // ---------- Helpers ----------
   const formatPeriodLabel = useCallback((periodType, start) => {
     const d = new Date(start);
@@ -1146,6 +1153,7 @@ const Dashboard = ({ onSwitch }) => {
     // monthly
     return d.toLocaleString("default", { month: "short", year: "numeric" });
   }, []);
+
   // ---------- Enhanced Data processors ----------
   const processRoomConsumptionData = useCallback((readings, rooms) => {
     if (!rooms?.length) return [];
@@ -1184,36 +1192,60 @@ const Dashboard = ({ onSwitch }) => {
   }, []);
 
   const processHistoryData = useCallback((readings, appliances, rooms) => {
-    if (!readings?.length) return [];
-    return readings.slice(0, 15).map((r) => {
-      const appId = typeof r.applianceId === "string" ? r.applianceId : r.applianceId?._id || r.applianceId?.id;
-      const roomId = typeof r.roomId === "string" ? r.roomId : r.roomId?._id || r.roomId?.id;
+  if (!readings?.length) return [];
+  
+  return readings.slice(0, 15).map((r, index, array) => {
+    const appId = typeof r.applianceId === "string" ? r.applianceId : r.applianceId?._id || r.applianceId?.id;
+    const roomId = typeof r.roomId === "string" ? r.roomId : r.roomId?._id || r.roomId?.id;
+    
+    const app = appliances.find((a) => (a._id?.toString() || a.id?.toString()) === appId?.toString());
+    const room = rooms.find((rm) => (rm._id?.toString() || rm.id?.toString()) === roomId?.toString());
+    
+    const date = new Date(r.recorded_at);
+    const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+    const dateStr = date.toLocaleDateString();
+    
+    // Calculate percentage change based on actual previous readings
+    const current = +(r.energy || 0);
+    
+    // Find a previous reading for the same appliance to calculate real change
+    let past = 0;
+    let percentage = 0;
+    
+    if (index > 0) {
+      // Look for previous readings from the same appliance
+      for (let i = index - 1; i >= 0; i--) {
+        const prevAppId = typeof array[i].applianceId === "string" ? array[i].applianceId : array[i].applianceId?._id || array[i].applianceId?.id;
+        if (prevAppId === appId) {
+          past = +(array[i].energy || 0);
+          break;
+        }
+      }
       
-      const app = appliances.find((a) => (a._id?.toString() || a.id?.toString()) === appId?.toString());
-      const room = rooms.find((rm) => (rm._id?.toString() || rm.id?.toString()) === roomId?.toString());
-      
-      const date = new Date(r.recorded_at);
-      const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
-      const dateStr = date.toLocaleDateString();
-      
-      // Calculate percentage change (using a simple mock calculation)
-      const current = +(r.energy || 0).toFixed(2);
-      const past = current * (0.8 + Math.random() * 0.4); // Random variation for demo
-      const percentage = current > 0 ? ((current - past) / past * 100).toFixed(1) : 0;
-      
-      return {
-        appliance: app?.name || "Unknown Appliance",
-        room: room?.name || "Unknown Room",
-        timestamp: `${dateStr} ${time}`,
-        current,
-        past: +past.toFixed(2),
-        percentage: +percentage,
-        isOn: r.is_on,
-        power: r.power || 0,
-        cost: r.cost || 0
-      };
-    });
-  }, []);
+      // Calculate percentage change only if we have valid previous data
+      if (past > 0 && current > 0) {
+        percentage = ((current - past) / past * 100);
+      } else if (current > 0 && past === 0) {
+        percentage = 100; // New consumption
+      } else if (current === 0 && past > 0) {
+        percentage = -100; // Consumption stopped
+      }
+    }
+    
+    return {
+      appliance: app?.name || "Unknown Appliance",
+      room: room?.name || "Unknown Room",
+      timestamp: `${dateStr} ${time}`,
+      current: +current.toFixed(6), // Keep more decimals for small values
+      past: +past.toFixed(6),
+      percentage: +percentage.toFixed(1),
+      isOn: r.is_on,
+      power: r.power || 0,
+      cost: r.cost || 0
+    };
+  });
+}, []);
+
   // ---------- Load homes ----------
   useEffect(() => {
     const fetchHomes = async () => {
@@ -1238,6 +1270,7 @@ const Dashboard = ({ onSwitch }) => {
     };
     fetchHomes();
   }, []);
+
   // persist home selection
   useEffect(() => {
     if (selectedHomeIndex !== null) {
@@ -1246,17 +1279,49 @@ const Dashboard = ({ onSwitch }) => {
       localStorage.removeItem("selectedHomeIndex");
     }
   }, [selectedHomeIndex]);
+
+  // Add useEffect to update current period when month changes
+  useEffect(() => {
+    const checkMonthChange = () => {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      if (currentMonth !== currentPeriod.month || currentYear !== currentPeriod.year) {
+        setCurrentPeriod({
+          month: currentMonth,
+          year: currentYear
+        });
+        // Force refetch of data when month changes
+        setLoading(true);
+      }
+    };
+
+    // Check every hour for month changes
+    const interval = setInterval(checkMonthChange, 60 * 60 * 1000);
+    
+    // Also check when the component mounts
+    checkMonthChange();
+    
+    return () => clearInterval(interval);
+  }, [currentPeriod.month, currentPeriod.year]);
+
   // ---------- Load dashboard data for selected home ----------
   const selectedHome = useMemo(
     () => (selectedHomeIndex !== null ? homes[selectedHomeIndex] : null),
     [homes, selectedHomeIndex]
   );
+
   useEffect(() => {
     if (!selectedHome) return;
     const fetchDashboard = async () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const homeId = selectedHome._id || selectedHome.id;
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
       try {
         // 1. Energy summary (grouped by period)
         const summaryRes = await fetch(
@@ -1270,6 +1335,7 @@ const Dashboard = ({ onSwitch }) => {
           production: 0,
         }));
         setOverallData(lineData);
+
         // 2. Raw readings (for rooms, appliances, history)
         const [readingsRes, appliancesRes, roomsRes] = await Promise.all([
           fetch(`${API_BASE}/energy?homeId=${homeId}`, {
@@ -1282,24 +1348,39 @@ const Dashboard = ({ onSwitch }) => {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-        const [readings, appliances, rooms] = await Promise.all([
+        
+        const [allReadings, appliances, rooms] = await Promise.all([
           readingsRes.ok ? readingsRes.json() : [],
           appliancesRes.ok ? appliancesRes.json() : [],
           roomsRes.ok ? roomsRes.json() : [],
         ]);
-        setRoomData(processRoomConsumptionData(readings, rooms));
-        setApplianceData(processApplianceConsumptionData(readings, appliances));
-        setHistoryData(processHistoryData(readings, appliances, rooms)); // Updated to include rooms
-        // Bills
-        const totalCost = readings.reduce((s, r) => s + (r.cost || 0), 0);
-        const recentCost = readings
+
+        // Filter readings to current month only for billing calculations
+        const currentMonthReadings = allReadings.filter(r => {
+          const readingDate = new Date(r.recorded_at);
+          return readingDate.getMonth() === currentMonth && 
+                 readingDate.getFullYear() === currentYear;
+        });
+
+        // Use all data for charts, but filtered data for billing
+        setRoomData(processRoomConsumptionData(allReadings, rooms));
+        setApplianceData(processApplianceConsumptionData(allReadings, appliances));
+        setHistoryData(processHistoryData(allReadings, appliances, rooms));
+
+        // Bills - ONLY use current month data
+        const totalCost = currentMonthReadings.reduce((s, r) => s + (r.cost || 0), 0);
+        
+        // For upcoming bill, use recent data (last 30 days) but within current month
+        const recentCost = currentMonthReadings
           .filter((r) => {
             const days = (Date.now() - new Date(r.recorded_at).getTime()) / (1000 * 60 * 60 * 24);
             return days <= 30;
           })
           .reduce((s, r) => s + (r.cost || 0), 0);
+
         setOverallBill(`₱${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         setUpcomingBill(`₱${recentCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        
       } catch (e) {
         console.error(e);
         setOverallData([]);
@@ -1320,6 +1401,8 @@ const Dashboard = ({ onSwitch }) => {
     processApplianceConsumptionData,
     processHistoryData,
     formatPeriodLabel,
+    currentPeriod.month, // Add dependency to refetch when month changes
+    currentPeriod.year
   ]);
   // ---------- UI ----------
   const COLORS = [

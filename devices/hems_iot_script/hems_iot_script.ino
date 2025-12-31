@@ -15,7 +15,7 @@ const char* WIFI_PASSWORD = "123456789";
 // API Server
 // !! CRITICAL: Do NOT use "localhost". 
 // Use your computer's Local IP Address (e.g., 192.168.0.28)
-const char* SERVER_IP = "10.23.184.29"; 
+const char* SERVER_IP = "10.183.103.29"; 
 const int SERVER_PORT = 5000;
 
 // --- NEW SECURE ENDPOINT ---
@@ -27,11 +27,14 @@ const char* ESP32_API_KEY = "5eb68d56eb48954221f4d680c1d40adbec1ab31a4357e2fa399
 
 // --- DEVICE IDs (from your MongoDB) ---
 // This is your REAL appliance attached to the PZEM
-const char* APPLIANCE_ID_REAL = "68eff6dfc5abd0c4fb1ee145"; 
+const char* APPLIANCE_ID_REAL = "69084899fbbf3c3d76dc951b"; 
 
 // --- NEW FAKE APPLIANCE IDs ---
-const char* APPLIANCE_ID_FAKE_1 = "68f9b51799f86f08094e2396";
-const char* APPLIANCE_ID_FAKE_2 = "68f7c645ba795b2115b24a37";
+const char* APPLIANCE_ID_FAKE_1 = "690848e1fbbf3c3d76dc95e6";
+const char* APPLIANCE_ID_FAKE_2 = "69084929fbbf3c3d76dc9624";
+
+
+ 
 
 
 // --- PINS (from your .ino file) ---
@@ -174,80 +177,68 @@ void sendRealEnergyData() {
 
     Serial.println("--- (1/3) Reading REAL PZEM data ---");
 
+    // Read all values first
     float voltage = pzem.voltage();
     float current = pzem.current();
     float power = pzem.power();
-    float totalEnergy_kWh = pzem.energy(); // This is total energy since reset
-    float energyForInterval_kWh = 0.0; // This is what we'll send
+    float totalEnergy_kWh = pzem.energy();
+    float frequency = pzem.frequency();
+    float pf = pzem.pf();
 
-    // --- *** NEW ROBUST SENSOR CHECKS *** ---
-    
-    // Check for a total sensor failure (e.g., wiring is wrong)
-    // If voltage is NaN or Infinity, something is very wrong.
-    if (isnan(voltage) || isinf(voltage)) {
-        Serial.println("❌ FAILED to read from PZEM sensor (Total failure - voltage is invalid)!");
-        Serial.println("🔧 Check wiring (RX/TX swapped?) or sensor power.");
-        
-        // Let's send a "0" reading anyway, so we know this function ran.
-        voltage = 220.0; // Assume a default voltage
+    // **DEBUG: Print ALL PZEM readings**
+    Serial.println("=== PZEM DEBUG INFO ===");
+    Serial.println("Voltage: " + String(voltage) + "V");
+    Serial.println("Current: " + String(current) + "A");
+    Serial.println("Power: " + String(power) + "W");
+    Serial.println("Total Energy: " + String(totalEnergy_kWh, 6) + "kWh");
+    Serial.println("Frequency: " + String(frequency) + "Hz");
+    Serial.println("Power Factor: " + String(pf));
+    Serial.println("======================");
+
+    float energyForInterval_kWh = 0.0;
+
+    // Sensor failure check
+    if (isnan(voltage) || isinf(voltage) || voltage < 50) {
+        Serial.println("❌ PZEM sensor communication failed!");
+        voltage = 220.0;
         current = 0.0;
         power = 0.0;
-        energyForInterval_kWh = 0.0; // No energy used this interval
-        Serial.println("ℹ️ Sensor communication failed. Sending 0 values.");
+        energyForInterval_kWh = 0.0;
     } else {
-        // Voltage is valid, proceed with normal checks for other values
-        Serial.println("✅ Voltage OK: " + String(voltage) + "V");
-        
-        // Handle "off" or "standby" states or bad readings
-        if (isnan(current) || isinf(current)) { current = 0.0; }
-        if (isnan(power) || isinf(power)) { power = 0.0; }
-        if (isnan(totalEnergy_kWh) || isinf(totalEnergy_kWh)) { 
-            totalEnergy_kWh = 0.0; // Fallback
-            Serial.println("ℹ️ Real energy was invalid, setting total to 0.0");
-        }
+        // Handle invalid readings
+        if (isnan(current) || isinf(current)) current = 0.0;
+        if (isnan(power) || isinf(power)) power = 0.0;
+        if (isnan(totalEnergy_kWh) || isinf(totalEnergy_kWh)) totalEnergy_kWh = 0.0;
 
-        // --- Calculate energy for THIS INTERVAL ---
+        // *** FIX: CALCULATE ENERGY FROM POWER ***
+        // Energy (kWh) = Power (kW) × Time (hours)
+        float intervalHours = (float)SEND_INTERVAL_MS / (1000.0 * 60.0 * 60.0);
+        energyForInterval_kWh = (power / 1000.0) * intervalHours;
+        
+        Serial.println("Using CALCULATED energy from power:");
+        Serial.println("Interval: " + String(SEND_INTERVAL_MS/1000) + " seconds = " + String(intervalHours, 6) + " hours");
+        Serial.println("Power: " + String(power) + "W = " + String(power/1000.0, 6) + "kW");
+        Serial.println("Calculated Energy: " + String(energyForInterval_kWh, 6) + "kWh");
+
+        // Still track the PZEM's total for debugging
         if (isFirstRealReading) {
-            // First time we run, we can't calculate a difference.
-            // So we'll just send 0 and store the current total.
-            energyForInterval_kWh = 0.0;
-            isFirstRealReading = false; // No longer the first reading
-            Serial.println("ℹ️ First real reading. Setting interval energy to 0 and calibrating.");
-        } else if (totalEnergy_kWh < lastRealEnergy_kWh) {
-            // This happens if the PZEM sensor was reset or power cycled.
-            energyForInterval_kWh = 0.0;
-            Serial.println("ℹ️ PZEM sensor appears to have reset. Resetting interval energy.");
-        } else {
-            // This is the normal case.
-            energyForInterval_kWh = totalEnergy_kWh - lastRealEnergy_kWh;
+            Serial.println("First reading - setting baseline");
+            isFirstRealReading = false;
         }
-
-        // Final safety check
-        if (energyForInterval_kWh < 0) {
-            energyForInterval_kWh = 0.0;
-        }
-        
-        // Store the new total for the *next* loop
-        lastRealEnergy_kWh = totalEnergy_kWh;
     }
-    
-    Serial.println("⚡ Real Voltage: " + String(voltage) + "V");
-    Serial.println("⚡ Real Power: " + String(power) + "W");
-    Serial.println("⚡ Real Energy (Interval): " + String(energyForInterval_kWh, 6) + "kWh");
-    Serial.println("⚡ Real Energy (Sensor Total): " + String(totalEnergy_kWh, 6) + "kWh");
 
+    Serial.println("⚡ FINAL - Interval Energy: " + String(energyForInterval_kWh, 6) + "kWh");
 
-    // --- Prepare JSON Payload ---
+    // Prepare JSON payload
     DynamicJsonDocument doc(256);
     doc["applianceId"] = APPLIANCE_ID_REAL;
-    doc["energy"] = energyForInterval_kWh; // <-- Send the interval energy
+    doc["energy"] = energyForInterval_kWh;
     doc["power"] = power;
     doc["current"] = current;
     doc["voltage"] = voltage;
     doc["recorded_at"] = getISOTimestamp();
-    doc["is_randomized"] = false; 
+    doc["is_randomized"] = false;
 
-    // --- Send to Server ---
     postDataToServer(doc, "REAL");
 }
 

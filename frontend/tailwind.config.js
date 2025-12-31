@@ -35,11 +35,8 @@ module.exports = {
             textShadow: '0 0 30px rgba(252, 211, 77, 0.8), 0 0 40px rgba(252, 211, 77, 0.3)',
           },
         }
-      },
-      fontFamily: {  // Add this new section
-        bebas: ['Bebas Neue', 'sans-serif'],  // Custom utility: font-bebas
-      },
+      }
     },
   },
-  plugins: [], // Your existing plugins
-};
+  plugins: [],
+}
